@@ -1,2 +1,5 @@
+[build]
+  publish = "nexus_netlify_ready"
+
 [functions]
   directory = "netlify/functions"
