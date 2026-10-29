@@ -569,88 +569,153 @@ document.getElementById('copySubmission').addEventListener('click', async functi
   loadCommunityProblems();
 })();
 </script>
-<!-- NEXUS Mission Board -->
-<section id="nexus-mission-board" style="max-width:900px;margin:40px auto;padding:24px;background:#111827;color:white;border-radius:16px;font-family:Arial,sans-serif">
+<!-- NEXUS Mission Board — XP + Levels -->
+<section id="nexus-mission-board" style="padding:20px;max-width:700px;margin:20px auto;background:#111827;color:white;border-radius:16px;font-family:Arial,sans-serif;">
   <h2>🚀 NEXUS Mission Board</h2>
-  <p>Turn your ideas into missions.</p>
-  <form id="nexus-task-form" style="display:flex;gap:8px;flex-wrap:wrap">
-    <input id="nexus-task-input" placeholder="Enter your next mission..." required style="flex:1;min-width:180px;padding:12px;border-radius:8px">
-    <button style="padding:12px 18px;border:0;border-radius:8px;cursor:pointer">+ Add Mission</button>
+  <p>Complete missions. Earn XP. Level up.</p>
+
+  <div style="padding:15px;background:#1f2937;border-radius:12px;margin-bottom:18px;">
+    <h3 style="margin:0 0 8px;">Level <span id="nexus-level">1</span></h3>
+    <p style="margin:0 0 8px;">Total XP: <strong id="nexus-xp">0</strong></p>
+    <div style="height:12px;background:#374151;border-radius:10px;overflow:hidden;">
+      <div id="nexus-xp-bar" style="height:100%;width:0%;background:#22c55e;transition:width .2s;"></div>
+    </div>
+    <small id="nexus-xp-progress">0 / 100 XP to next level</small>
+  </div>
+
+  <form id="nexus-task-form" style="display:flex;gap:8px;margin-bottom:16px;">
+    <input id="nexus-task-input" type="text" placeholder="Enter a new mission..." required style="flex:1;min-width:0;padding:12px;border-radius:8px;border:1px solid #4b5563;background:#1f2937;color:white;">
+    <button type="submit" style="padding:10px 14px;border:0;border-radius:8px;background:#22c55e;color:#052e16;font-weight:bold;">Add</button>
   </form>
-  <p id="nexus-task-count">0 missions</p>
-  <ul id="nexus-task-list" style="padding:0;list-style:none"></ul>
+
+  <div id="nexus-task-list"></div>
+  <p style="font-size:12px;color:#9ca3af;">Each mission gives +10 XP once when completed.</p>
 </section>
 
 <script>
 (function () {
-  const key = "nexus_missions_v1";
+  const board = document.getElementById("nexus-mission-board");
+  if (!board || board.dataset.initialized === "true") return;
+  board.dataset.initialized = "true";
+
   const form = document.getElementById("nexus-task-form");
   const input = document.getElementById("nexus-task-input");
   const list = document.getElementById("nexus-task-list");
-  const count = document.getElementById("nexus-task-count");
+  const xpEl = document.getElementById("nexus-xp");
+  const levelEl = document.getElementById("nexus-level");
+  const bar = document.getElementById("nexus-xp-bar");
+  const progress = document.getElementById("nexus-xp-progress");
 
-  let tasks = [];
-  try {
-    tasks = JSON.parse(localStorage.getItem(key) || "[]");
-    if (!Array.isArray(tasks)) tasks = [];
-  } catch (e) { tasks = []; }
+  const TASKS_KEY = "nexus_missions_v1";
+  const XP_KEY = "nexus_xp_v1";
+
+  function loadTasks() {
+    try {
+      const value = JSON.parse(localStorage.getItem(TASKS_KEY) || "[]");
+      return Array.isArray(value) ? value.map(task => ({
+        ...task,
+        xpAwarded: Boolean(task.xpAwarded)
+      })) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function loadXP() {
+    const value = Number(localStorage.getItem(XP_KEY) || 0);
+    return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+  }
+
+  let tasks = loadTasks();
+  let xp = loadXP();
 
   function save() {
-    try { localStorage.setItem(key, JSON.stringify(tasks)); }
-    catch (e) { alert("Browser storage unavailable."); }
+    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+    localStorage.setItem(XP_KEY, String(xp));
+  }
+
+  function updateXP() {
+    const level = Math.floor(xp / 100) + 1;
+    const withinLevel = xp % 100;
+    xpEl.textContent = xp;
+    levelEl.textContent = level;
+    bar.style.width = withinLevel + "%";
+    progress.textContent = withinLevel + " / 100 XP to next level";
   }
 
   function render() {
     list.replaceChildren();
-    count.textContent = tasks.filter(t => !t.done).length +
-      " active / " + tasks.length + " total missions";
 
-    tasks.forEach(task => {
-      const li = document.createElement("li");
-      li.style.cssText =
-        "display:flex;align-items:center;gap:10px;padding:12px;margin:10px 0;background:#1f2937;border-radius:10px;flex-wrap:wrap";
+    if (!tasks.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No missions yet. Add your first mission!";
+      list.appendChild(empty);
+    }
 
-      const check = document.createElement("input");
-      check.type = "checkbox";
-      check.checked = task.done;
-      check.setAttribute("aria-label", "Mark mission complete");
-      check.onchange = () => {
-        task.done = check.checked;
-        save(); render();
-      };
+    tasks.forEach((task, index) => {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:10px;padding:12px;margin:8px 0;background:#1f2937;border-radius:10px;";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = Boolean(task.completed);
+      checkbox.setAttribute("aria-label", "Complete " + task.text);
 
       const label = document.createElement("span");
       label.textContent = task.text;
-      label.style.cssText = "flex:1;min-width:120px;overflow-wrap:anywhere";
-      if (task.done) label.style.textDecoration = "line-through";
+      label.style.cssText = "flex:1;overflow-wrap:anywhere;";
+      if (task.completed) label.style.textDecoration = "line-through";
+
+      const status = document.createElement("small");
+      status.textContent = task.xpAwarded ? "+10 XP earned" : (task.completed ? "Completed" : "+10 XP");
 
       const del = document.createElement("button");
       del.type = "button";
       del.textContent = "Delete";
-      del.style.cssText = "padding:8px 12px;border:0;border-radius:6px;cursor:pointer";
-      del.onclick = () => {
-        tasks = tasks.filter(t => t.id !== task.id);
-        save(); render();
-      };
+      del.style.cssText = "padding:7px;border:0;border-radius:6px;background:#374151;color:white;";
 
-      li.append(check, label, del);
-      list.append(li);
+      checkbox.addEventListener("change", () => {
+        task.completed = checkbox.checked;
+        if (task.completed && !task.xpAwarded) {
+          xp += 10;
+          task.xpAwarded = true;
+        }
+        save();
+        updateXP();
+        render();
+      });
+
+      del.addEventListener("click", () => {
+        tasks.splice(index, 1);
+        save();
+        render();
+      });
+
+      row.append(checkbox, label, status, del);
+      list.appendChild(row);
     });
+
+    updateXP();
   }
 
-  form.addEventListener("submit", function (event) {
+  form.addEventListener("submit", event => {
     event.preventDefault();
     const text = input.value.trim();
     if (!text) return;
-    tasks.unshift({
-      id: Date.now().toString() + Math.random().toString(36).slice(2),
-      text, done: false
+
+    tasks.push({
+      id: Date.now().toString(),
+      text,
+      completed: false,
+      xpAwarded: false
     });
+
     save();
     input.value = "";
     render();
   });
 
+  save();
   render();
 })();
 </script>
