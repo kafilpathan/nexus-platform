@@ -1,0 +1,8 @@
+{
+  "name": "nexus-netlify-ready",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NEXUS static website with Netlify Functions for problem submissions and KAF-AI investigation planning",
+  "engines": { "node": ">=18" },
+  "scripts": { "dev": "netlify dev" }
+}
