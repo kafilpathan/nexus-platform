@@ -772,5 +772,136 @@ document.getElementById('copySubmission').addEventListener('click', async functi
   render();
 })();
 </script>
+  <!-- NEXUS ADMIN ACCESS -->
+<style>
+#nexusAdminLauncher{position:fixed;right:16px;bottom:16px;z-index:9000}
+#nexusAdminLauncher button{background:#7567f8;color:white;border:0;border-radius:999px;padding:12px 17px;font-weight:700;cursor:pointer}
+#nexusAdminOverlay{position:fixed;inset:0;z-index:9100;background:#050814ed;display:none;overflow:auto;padding:24px 14px;color:#f5f6ff}
+#nexusAdminOverlay.open{display:block}
+#nexusAdminBox{max-width:960px;margin:4vh auto;background:#101626;border:1px solid #343d58;border-radius:18px;padding:22px}
+#nexusAdminBox input{box-sizing:border-box;width:100%;padding:12px;margin:6px 0 14px;border-radius:9px;border:1px solid #39435d;background:#080d19;color:white}
+#nexusAdminBox button{cursor:pointer;border:0;border-radius:8px;padding:10px 14px;margin:4px;background:#7567f8;color:white}
+.nexus-admin-item{border:1px solid #303a52;border-radius:12px;padding:14px;margin:12px 0;background:#0b1120}
+.nexus-admin-item p{white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+
+<div id="nexusAdminLauncher">
+<button type="button" id="nexusAdminOpen">Admin Login</button>
+</div>
+
+<div id="nexusAdminOverlay" role="dialog" aria-modal="true">
+<div id="nexusAdminBox">
+<h2>NEXUS Admin</h2>
+<button type="button" id="nexusAdminClose">Close ✕</button>
+
+<section id="nexusAdminLogin">
+<p>Sign in with your admin account.</p>
+<label>Email</label>
+<input id="nexusAdminEmail" type="email" autocomplete="username">
+<label>Password</label>
+<input id="nexusAdminPassword" type="password" autocomplete="current-password">
+<button type="button" id="nexusAdminSignIn">Sign in</button>
+</section>
+
+<section id="nexusAdminDashboard" hidden>
+<h3>Problem submissions</h3>
+<button type="button" id="nexusAdminRefresh">Refresh</button>
+<button type="button" id="nexusAdminLogout">Log out</button>
+<div id="nexusAdminList"></div>
+</section>
+<p id="nexusAdminMsg" role="status"></p>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+ const client = window.supabase.createClient(
+  "https://rgrbeuwwomejbrstopcr.supabase.co",
+  "sb_publishable_MY6nsHoJdvfxqHTvp-Hnkw_NXPF02eJ"
+ );
+
+ const overlay=document.getElementById("nexusAdminOverlay");
+ const login=document.getElementById("nexusAdminLogin");
+ const dash=document.getElementById("nexusAdminDashboard");
+ const msg=document.getElementById("nexusAdminMsg");
+ const list=document.getElementById("nexusAdminList");
+ const say=t=>msg.textContent=t;
+
+ document.getElementById("nexusAdminOpen").onclick=()=>overlay.classList.add("open");
+ document.getElementById("nexusAdminClose").onclick=()=>overlay.classList.remove("open");
+
+ async function verifyAdmin(){
+  const {data:{user},error}=await client.auth.getUser();
+  if(error||!user)return false;
+  const {data,error:e}=await client.from("nexus_admins")
+   .select("user_id").eq("user_id",user.id).maybeSingle();
+  if(e)throw e;
+  return !!data;
+ }
+
+ async function loadProblems(){
+  list.replaceChildren();
+  say("Loading...");
+  const {data,error}=await client.from("nexus_problems")
+   .select("*").order("created_at",{ascending:false});
+  if(error){say("Error: "+error.message);return;}
+  say(data.length+" submission(s) found.");
+  if(!data.length){list.textContent="No submissions yet.";return;}
+
+  data.forEach(p=>{
+   const card=document.createElement("article");
+   card.className="nexus-admin-item";
+   const title=document.createElement("h4");
+   title.textContent=p.title||"Untitled";
+   const details=document.createElement("p");
+   details.textContent=p.details||p.description||"";
+   const status=document.createElement("input");
+   status.value=p.status||"pending";
+   status.setAttribute("aria-label","Problem status");
+   const save=document.createElement("button");
+   save.textContent="Save status";
+   save.onclick=async()=>{
+    const {error}=await client.from("nexus_problems")
+     .update({status:status.value.trim()||"pending"}).eq("id",p.id);
+    say(error?"Update failed: "+error.message:"Status updated!");
+   };
+   card.append(title,details,status,save);
+   list.append(card);
+  });
+ }
+
+ document.getElementById("nexusAdminSignIn").onclick=async()=>{
+  const email=document.getElementById("nexusAdminEmail").value.trim();
+  const password=document.getElementById("nexusAdminPassword").value;
+  if(!email||!password){say("Enter email and password.");return;}
+  say("Signing in...");
+  const {error}=await client.auth.signInWithPassword({email,password});
+  if(error){say(error.message);return;}
+  try{
+   if(!(await verifyAdmin())){
+    await client.auth.signOut();
+    say("Access denied: not an admin account.");
+    return;
+   }
+   login.hidden=true;
+   dash.hidden=false;
+   await loadProblems();
+  }catch(e){
+   await client.auth.signOut();
+   say("Verification error: "+e.message);
+  }
+ };
+
+ document.getElementById("nexusAdminRefresh").onclick=loadProblems;
+ document.getElementById("nexusAdminLogout").onclick=async()=>{
+  await client.auth.signOut();
+  login.hidden=false;
+  dash.hidden=true;
+  list.replaceChildren();
+  say("Logged out.");
+ };
+})();
+</script>
 </body>
 </html>
