@@ -911,5 +911,95 @@ status.setAttribute("aria-label", "Problem status");
  };
 })();
 </script>
+  <!-- NEXUS KAF-AI CHAT -->
+<style>
+#kafai-launch{position:fixed;left:16px;bottom:16px;z-index:9990}
+#kafai-launch button{padding:13px 18px;border:0;border-radius:30px;background:#74f0e3;color:#08111a;font-weight:800}
+#kafai-panel{display:none;position:fixed;left:16px;bottom:75px;z-index:9991;width:min(370px,calc(100vw - 32px));height:480px;background:#101626;color:white;border:1px solid #74f0e3;border-radius:18px;overflow:hidden;flex-direction:column}
+#kafai-panel.open{display:flex}
+#kafai-head{padding:14px;border-bottom:1px solid #39435d;display:flex;justify-content:space-between}
+#kafai-messages{flex:1;overflow:auto;padding:12px}
+.kafai-msg{padding:10px;margin:8px 0;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.kafai-bot{background:#202a40}
+.kafai-user{background:#164b4b;text-align:right}
+#kafai-form{display:flex;gap:7px;padding:10px}
+#kafai-input{flex:1;min-width:0;padding:10px;background:#080b14;color:white;border:1px solid #39435d;border-radius:9px}
+#kafai-form button{background:#74f0e3;border:0;border-radius:9px;padding:10px}
+</style>
+
+<div id="kafai-launch">
+<button type="button" id="kafai-open">✦ Ask KAF-AI</button>
+</div>
+
+<div id="kafai-panel">
+<div id="kafai-head">
+<strong>✦ NEXUS KAF-AI</strong>
+<button type="button" id="kafai-close">✕</button>
+</div>
+<div id="kafai-messages">
+<div class="kafai-msg kafai-bot">Hello! I am KAF-AI. How can I help you?</div>
+</div>
+<form id="kafai-form">
+<input id="kafai-input" placeholder="Message KAF-AI..." maxlength="4000" required>
+<button type="submit" id="kafai-send">Send</button>
+</form>
+</div>
+
+<script>
+(() => {
+ const panel=document.getElementById("kafai-panel");
+ const messages=document.getElementById("kafai-messages");
+ const input=document.getElementById("kafai-input");
+ const send=document.getElementById("kafai-send");
+
+ function addMessage(text,type){
+  const div=document.createElement("div");
+  div.className="kafai-msg kafai-"+type;
+  div.textContent=text;
+  messages.appendChild(div);
+  messages.scrollTop=messages.scrollHeight;
+  return div;
+ }
+
+ document.getElementById("kafai-open").onclick=()=>{
+  panel.classList.add("open");
+ };
+ document.getElementById("kafai-close").onclick=()=>{
+  panel.classList.remove("open");
+ };
+
+ document.getElementById("kafai-form").onsubmit=async(e)=>{
+  e.preventDefault();
+  const message=input.value.trim();
+  if(!message||send.disabled)return;
+
+  addMessage(message,"user");
+  input.value="";
+  send.disabled=true;
+  const pending=addMessage("Thinking...","bot");
+
+  try{
+   const response=await fetch(
+    "https://nexus-kaf-ai.kumarchotu36553.workers.dev/api/chat",
+    {
+     method:"POST",
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({message})
+    }
+   );
+   const data=await response.json();
+   if(!response.ok||!data.success){
+    throw new Error(data.error||"Request failed");
+   }
+   pending.textContent=data.reply;
+  }catch(error){
+   pending.textContent="Connection error: "+error.message;
+  }finally{
+   send.disabled=false;
+   messages.scrollTop=messages.scrollHeight;
+  }
+ };
+})();
+</script>
 </body>
 </html>
