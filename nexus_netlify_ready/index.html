@@ -856,16 +856,24 @@ document.getElementById('copySubmission').addEventListener('click', async functi
    title.textContent=p.title||"Untitled";
    const details=document.createElement("p");
    details.textContent=p.details||p.description||"";
-   const status=document.createElement("input");
-   status.value=p.status||"pending";
-   status.setAttribute("aria-label","Problem status");
+   const status=document.createElement("select");
+["Open", "Under Research", "Tested / Resolved"].forEach(value => {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = value;
+  status.appendChild(option);
+});
+status.value = p.status || "Open";
+status.setAttribute("aria-label", "Problem status");
    const save=document.createElement("button");
    save.textContent="Save status";
-   save.onclick=async()=>{
-    const {error}=await client.from("nexus_problems")
-     .update({status:status.value.trim()||"pending"}).eq("id",p.id);
-    say(error?"Update failed: "+error.message:"Status updated!");
-   };
+  save.onclick=async()=>{
+  const {error}=await client.from("nexus_problems")
+    .update({status:status.value})
+    .eq("id",p.id);
+
+  say(error ? "Update failed: "+error.message : "Status updated!");
+};
    card.append(title,details,status,save);
    list.append(card);
   });
