@@ -114,30 +114,30 @@ footer{border-top:1px solid var(--line);padding:27px 0;margin-top:65px;color:#8c
   </section>
   <section id="submit">
     <div class="wrap">
-      <div class="section-head"><div class="kicker">Start here</div><h2>Every solution starts with a problem.</h2><p>Describe a challenge you want people to think about. This early version prepares an email to the NEXUS project lead; it does not store submissions on the website yet.</p></div>
+      <div class="section-head"><div class="kicker">Start here</div><h2>Every solution starts with a problem.</h2><p>Describe a challenge you want people to think about. Your submission will be saved to the NEXUS database and may appear in Community submissions.</p></div>
       <div class="project">
         <div class="project-panel">
           <form id="problemForm">
             <label for="problemTitle" style="display:block;margin:0 0 7px;font-weight:700">Problem title</label>
-            <input id="problemTitle" name="title" required maxlength="120" placeholder="What problem should we explore?" style="display:block;width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#080b14;color:var(--text);font:inherit;margin-bottom:16px">
+            <input id="problemTitle" name="title" required minlength="3" maxlength="120" placeholder="What problem should we explore?" style="display:block;width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#080b14;color:var(--text);font:inherit;margin-bottom:16px">
             <label for="problemCategory" style="display:block;margin:0 0 7px;font-weight:700">Category</label>
             <select id="problemCategory" name="category" style="display:block;width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#080b14;color:var(--text);font:inherit;margin-bottom:16px"><option>Everyday life</option><option>Education</option><option>Environment</option><option>Science & technology</option><option>Health & wellbeing</option><option>Community</option><option>Other</option></select>
             <label for="problemDetails" style="display:block;margin:0 0 7px;font-weight:700">Describe the problem</label>
-            <textarea id="problemDetails" name="details" required maxlength="3000" rows="5" aria-describedby="detailsHelp detailsCount" placeholder="What happens, who is affected, and what have you tried? Please don't include private or sensitive information." style="display:block;width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#080b14;color:var(--text);font:inherit;resize:vertical;margin-bottom:18px"></textarea>
+            <textarea id="problemDetails" name="details" required minlength="10" maxlength="3000" rows="5" aria-describedby="detailsHelp detailsCount" placeholder="What happens, who is affected, and what have you tried? Please don't include private or sensitive information." style="display:block;width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#080b14;color:var(--text);font:inherit;resize:vertical;margin-bottom:18px"></textarea>
             <div class="counter"><span id="detailsHelp">Please avoid sensitive personal information.</span><span id="detailsCount">0 / 3000</span></div>
-            <label class="privacy-check"><input id="privacyConfirm" type="checkbox" required><span>I understand this submission will be sent by email and is not stored on the NEXUS website.</span></label>
-            <div class="form-actions"><button class="btn primary" type="submit">Prepare submission ↗</button><button class="btn secondary-btn" id="showFallback" type="button">Email not opening?</button></div>
-            <p id="formStatus" class="notice form-status" role="status" aria-live="polite">Your email app opens only after you submit. Review the message and press Send in your email app.</p>
-            <div id="fallbackPanel" hidden><label for="fallbackText" style="display:block;margin:12px 0 7px;font-weight:700">Copy and send manually</label><textarea id="fallbackText" readonly rows="7" style="display:block;width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#080b14;color:var(--text);font:inherit"></textarea><div class="form-actions"><button class="btn secondary-btn" id="copySubmission" type="button">Copy submission text</button><a class="btn ghost" href="mailto:kafkhanm2@gmail.com?subject=NEXUS%20problem%20submission">Open email to NEXUS</a></div><p id="copyStatus" class="notice" aria-live="polite">If copying isn't available, select the text above and copy it manually.</p></div>
+            <label class="privacy-check"><input id="privacyConfirm" type="checkbox" required><span>I understand my title, category, and description will be stored in the NEXUS database and may be visible in Community submissions. I will not include private or sensitive information.</span></label>
+            <div class="form-actions"><button class="btn primary" type="submit">Submit problem ↗</button><button class="btn secondary-btn" id="showFallback" type="button">Copy submission text</button></div>
+            <p id="formStatus" class="notice form-status" role="status" aria-live="polite">Your submission is sent to the NEXUS database when you press Submit problem.</p>
+            <div id="fallbackPanel" hidden><label for="fallbackText" style="display:block;margin:12px 0 7px;font-weight:700">Copy and send manually</label><textarea id="fallbackText" readonly rows="7" style="display:block;width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#080b14;color:var(--text);font:inherit"></textarea><div class="form-actions"><button class="btn secondary-btn" id="copySubmission" type="button">Copy submission text</button></div><p id="copyStatus" class="notice" aria-live="polite">If copying isn't available, select the text above and copy it manually.</p></div>
           </form>
         </div>
         <div class="project-panel"><span class="tag">What happens next?</span><h3>A transparent process</h3>
           <div class="steps">
-            <div class="step"><div class="num">01</div><div><b>We receive the idea</b><span>The project lead receives your email if you choose to send it.</span></div></div>
+            <div class="step"><div class="num">01</div><div><b>We receive the idea</b><span>Your problem is saved to the NEXUS database for review.</span></div></div>
             <div class="step"><div class="num">02</div><div><b>We clarify the challenge</b><span>We identify the goal, constraints, and unanswered questions.</span></div></div>
             <div class="step"><div class="num">03</div><div><b>We explore approaches</b><span>Possible next steps can be researched with AI assistance and human input.</span></div></div>
           </div>
-          <p class="notice">Submissions are not yet published to a public board, and AI analysis is not automatically connected to this form.</p>
+          <p class="notice">Community submissions may be visible to visitors. Do not submit private, identifying, or sensitive information. AI analysis is not automatically connected to this form.</p>
         </div>
       </div>
     </div>
@@ -265,7 +265,7 @@ footer{border-top:1px solid var(--line);padding:27px 0;margin-top:65px;color:#8c
   <section id="privacy">
     <div class="wrap about">
       <div><div class="kicker">Privacy & trust</div><h2 style="font-size:2.3rem;line-height:1.1;letter-spacing:-.045em">Build trust from day one.</h2></div>
-      <div class="about-copy"><p>Only submit information you are comfortable sharing by email. Do not include passwords, private records, or other sensitive personal details. Your email app lets you review the message before sending.</p><p>At this stage, NEXUS has no website accounts, public submission feed, or automated AI review. If we add those features, we should explain what data is collected, who can see it, and how it can be removed.</p></div>
+      <div class="about-copy"><p>Only submit information you are comfortable sharing with the NEXUS project team and potentially other site visitors. Do not include passwords, private records, contact details, or other sensitive personal information.</p><p>Problem titles, categories, and descriptions are stored in the NEXUS database and may be shown in Community submissions. Do not submit anything you would not want shared publicly.</p></div>
     </div>
   </section>
   <section id="project">
@@ -313,7 +313,7 @@ footer{border-top:1px solid var(--line);padding:27px 0;margin-top:65px;color:#8c
   </section>
   <section id="join">
     <div class="wrap">
-      <div class="join"><div><div class="kicker">Help shape the beginning</div><h2>Have a problem worth solving?</h2><p>Share a problem, suggest a feature, or tell us what a useful collaboration platform should do. The first version is a concept page; community accounts and online submissions are not live yet.</p></div><a class="btn primary" href="mailto:kafkhanm2@gmail.com?subject=NEXUS%20project%20idea">Share an idea ↗</a></div>
+      <div class="join"><div><div class="kicker">Help shape the beginning</div><h2>Have a problem worth solving?</h2><p>Share a problem, suggest a feature, or tell us what a useful collaboration platform should do. The first version is a concept page. Problem submissions are available in beta; community accounts are not live yet.</p></div><a class="btn primary" href="mailto:kafkhanm2@gmail.com?subject=NEXUS%20project%20idea">Share an idea ↗</a></div>
       <p class="notice">For project enquiries: <a href="mailto:kafkhanm2@gmail.com">kafkhanm2@gmail.com</a> · <a href="tel:+919113460668">+91 91134 60668</a></p>
       <p class="notice">Privacy note: this demo displays contact details and a profile photo publicly. Before publishing it online, consider whether you want your phone number and photo visible to everyone. Avoid sharing private or sensitive information by email.</p>
     </div>
@@ -459,113 +459,166 @@ const detailsField = document.getElementById('problemDetails');
 const statusField = document.getElementById('formStatus');
 const fallbackPanel = document.getElementById('fallbackPanel');
 const fallbackText = document.getElementById('fallbackText');
+const submitButton = problemForm.querySelector('button[type="submit"]');
+const NEXUS_API = 'https://nexus-kaf-ai.kumarchotu36553.workers.dev';
+
 function makeSubmissionText() {
-  return 'To: kafkhanm2@gmail.com\nSubject: NEXUS problem submission: ' + titleField.value.trim() + '\n\nProblem title: ' + titleField.value.trim() + '\nCategory: ' + categoryField.value + '\n\nProblem description:\n' + detailsField.value.trim() + '\n\nSent through the NEXUS concept website.';
+  return 'NEXUS PROBLEM SUBMISSION\n\nProblem title: ' + titleField.value.trim() +
+    '\nCategory: ' + categoryField.value +
+    '\n\nProblem description:\n' + detailsField.value.trim();
 }
+
 detailsField.addEventListener('input', function() {
   document.getElementById('detailsCount').textContent = detailsField.value.length + ' / 3000';
 });
-problemForm.addEventListener('submit', function(event) {
+
+problemForm.addEventListener('submit', async function(event) {
   event.preventDefault();
   if (!problemForm.reportValidity()) return;
-  fallbackText.value = makeSubmissionText();
-  fallbackPanel.hidden = false;
-  statusField.textContent = 'Your email app should open now. The website has not sent or stored this submission. Review it and press Send in your email app.';
-  const subject = encodeURIComponent('NEXUS problem submission: ' + titleField.value.trim());
-  const body = encodeURIComponent('Problem title: ' + titleField.value.trim() + '\nCategory: ' + categoryField.value + '\n\nProblem description:\n' + detailsField.value.trim() + '\n\nSent through the NEXUS concept website.');
-  window.location.href = 'mailto:kafkhanm2@gmail.com?subject=' + subject + '&body=' + body;
+
+  if (!document.getElementById('privacyConfirm').checked) {
+    statusField.textContent = 'Please confirm the privacy notice before submitting.';
+    return;
+  }
+
+  submitButton.disabled = true;
+  statusField.textContent = 'Submitting your problem to NEXUS…';
+
+  try {
+    const response = await fetch(NEXUS_API + '/api/problems', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        title: titleField.value.trim(),
+        category: categoryField.value,
+        details: detailsField.value.trim()
+      })
+    });
+
+    let data;
+    try { data = await response.json(); }
+    catch (_) { throw new Error('The server returned an unreadable response.'); }
+
+    if (!response.ok || data.success === false || !data.problem) {
+      throw new Error(data.error || data.message || 'The server could not save this submission.');
+    }
+
+    statusField.textContent = 'Your problem has been saved successfully. Reference: #' +
+      data.problem.id + '. Thank you for contributing to NEXUS.';
+    problemForm.reset();
+    document.getElementById('detailsCount').textContent = '0 / 3000';
+    fallbackPanel.hidden = true;
+    if (typeof window.nexusReloadCommunityProblems === 'function') window.nexusReloadCommunityProblems();
+  } catch (error) {
+    statusField.textContent = 'Submission was not confirmed: ' + error.message +
+      ' Please try again later. Your text is still available to copy below.';
+    fallbackText.value = makeSubmissionText();
+    fallbackPanel.hidden = false;
+  } finally {
+    submitButton.disabled = false;
+  }
 });
+
 document.getElementById('showFallback').addEventListener('click', function() {
   if (!titleField.value.trim() || !detailsField.value.trim()) {
-    statusField.textContent = 'Enter a problem title and description first, then choose Email not opening?';
+    statusField.textContent = 'Enter a problem title and description first.';
     titleField.focus();
     return;
   }
   fallbackText.value = makeSubmissionText();
   fallbackPanel.hidden = false;
-  statusField.textContent = 'Manual backup ready. Copy the text below and send it to kafkhanm2@gmail.com.';
-  fallbackPanel.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'nearest'});
+  statusField.textContent = 'Your draft is ready to copy. It has not been submitted to the database.';
+  fallbackPanel.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    block: 'nearest'
+  });
 });
+
 document.getElementById('copySubmission').addEventListener('click', async function() {
   try {
     await navigator.clipboard.writeText(fallbackText.value);
-    document.getElementById('copyStatus').textContent = 'Submission text copied. Paste it into an email to kafkhanm2@gmail.com.';
+    document.getElementById('copyStatus').textContent = 'Submission text copied.';
   } catch (error) {
     fallbackText.focus();
     fallbackText.select();
-    document.getElementById('copyStatus').textContent = 'Automatic copying was blocked. The text is selected—copy it manually and email it to kafkhanm2@gmail.com.';
+    document.getElementById('copyStatus').textContent = 'Automatic copying was blocked. The text is selected—copy it manually.';
   }
 });
 </script>
 
 <script>
-// Optional live backend bridge. Without server-side credentials the original demo remains available.
-(async function nexusBackendBridge(){
-  let config={databaseConfigured:false,aiConfigured:false};
-  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  try {
-    const r=await fetch('/api/health',{headers:{'Accept':'application/json'}});
-    if(r.ok) config=await r.json();
-  } catch (_) { return; }
-  const consent=document.querySelector('#privacyConfirm')?.parentElement?.querySelector('span');
-  if(config.databaseConfigured && consent) consent.textContent='I understand this submission will be saved in the NEXUS database and may be reviewed by the project team. Do not include sensitive personal information.';
-  if(config.databaseConfigured){
-    const form=document.getElementById('problemForm');
-    form.addEventListener('submit',async function(event){
-      event.preventDefault(); event.stopImmediatePropagation();
-      if(!form.reportValidity()) return;
-      const status=document.getElementById('formStatus');
-      const button=form.querySelector('[type="submit"]');
-      button.disabled=true; status.textContent='Submitting your problem securely…';
-      try{
-        const response=await fetch('/api/problems',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:document.getElementById('problemTitle').value.trim(),category:document.getElementById('problemCategory').value,details:document.getElementById('problemDetails').value.trim()})});
-        const data=await response.json();
-        if(!response.ok) throw new Error(data.error||'Submission failed.');
-        status.textContent='Problem submitted and saved. Reference: #'+data.problem.id+'. Thank you for contributing to NEXUS.';
-        form.reset(); document.getElementById('detailsCount').textContent='0 / 3000'; document.getElementById('fallbackPanel').hidden=true;
-        loadCommunityProblems();
-      }catch(error){status.textContent='Could not save: '+error.message+'. Your problem has not been submitted.';}
-      finally{button.disabled=false;}
-    },true);
-  }
-  const runButton=document.getElementById('impossibleRun');
-  if(config.aiConfigured && runButton){
-    document.addEventListener('click',async function(event){
-      if(event.target.closest('#impossibleRun')!==runButton) return;
-      event.preventDefault(); event.stopImmediatePropagation();
-      const challenge=document.getElementById('impossibleChallenge').value.trim();
-      const constraint=document.getElementById('impossibleLimit').value;
-      const result=document.getElementById('impossibleResult'); const status=document.getElementById('impossibleStatus');
-      if(challenge.length<8){status.textContent='Describe a challenge first (at least 8 characters).';return;}
-      runButton.disabled=true; status.textContent='KAF-AI is preparing an investigation plan…';
-      result.innerHTML='<p class="muted">KAF-AI is working…</p>';
-      try{
-        const response=await fetch('/api/investigate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({problem:challenge,constraint})});
-        const data=await response.json(); if(!response.ok) throw new Error(data.error||'Investigation failed.');
-        result.replaceChildren();
-        const stamp=document.createElement('span'); stamp.className='impossible-stamp'; stamp.textContent='KAF-AI investigation · draft'; result.appendChild(stamp);
-        const heading=document.createElement('h3'); heading.style.margin='12px 0 8px'; heading.textContent=challenge; result.appendChild(heading);
-        const pre=document.createElement('pre'); pre.style.whiteSpace='pre-wrap'; pre.style.font='inherit'; pre.style.lineHeight='1.65'; pre.textContent=data.investigation; result.appendChild(pre);
-        const disclaimer=document.createElement('p'); disclaimer.className='muted'; disclaimer.textContent=data.disclaimer; result.appendChild(disclaimer);
-        result.dataset.copy='NEXUS — KAF-AI INVESTIGATION\n\nCHALLENGE: '+challenge+'\n\n'+data.investigation+'\n\n'+data.disclaimer;
-        status.textContent='Investigation plan generated. Verify important claims and independently check any sources before acting.';
-      }catch(error){status.textContent='KAF-AI could not respond: '+error.message; result.innerHTML='<p class="muted">Try again later or use the local planning template.</p>';}
-      finally{runButton.disabled=false;}
-    },true);
-  }
+// Load community submissions directly from the NEXUS Cloudflare Worker.
+// The Impossible Button remains an honest local prototype until an AI endpoint is configured.
+(async function nexusCommunityFeed(){
+  const API = 'https://nexus-kaf-ai.kumarchotu36553.workers.dev';
   async function loadCommunityProblems(){
-    if(!config.databaseConfigured) return;
-    try{
-      const response=await fetch('/api/problems'); if(!response.ok) return;
-      const data=await response.json(); const host=document.getElementById('globalMapCards'); if(!host) return;
-      const existing=document.getElementById('liveCommunityProblems'); if(existing) existing.remove();
-      const section=document.createElement('div'); section.id='liveCommunityProblems'; section.style.marginTop='20px';
-      const title=document.createElement('h3'); title.textContent='Community submissions'; section.appendChild(title);
-      if(!data.problems.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='No community submissions yet. Be the first to share a problem.';section.appendChild(empty);}
-      data.problems.forEach(item=>{const card=document.createElement('article');card.className='map-card';const tag=document.createElement('span');tag.className='map-tag';tag.textContent=item.category;const h=document.createElement('h3');h.textContent=item.title;const desc=document.createElement('p');desc.textContent=item.details;const meta=document.createElement('div');meta.className='map-meta';meta.textContent=item.status+' · '+new Date(item.created_at).toLocaleDateString();const btn=document.createElement('button');btn.className='btn ghost';btn.type='button';btn.textContent='Explore in MindMesh ↗';btn.addEventListener('click',()=>{document.getElementById('meshProblem').value=item.title+': '+item.details;document.getElementById('mindmesh').scrollIntoView({behavior:'smooth'});});card.append(tag,h,desc,meta,btn);section.appendChild(card);});
+    try {
+      const response = await fetch(API + '/api/problems', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!data.success || !Array.isArray(data.problems)) return;
+
+      const host = document.getElementById('globalMapCards');
+      if (!host) return;
+      const existing = document.getElementById('liveCommunityProblems');
+      if (existing) existing.remove();
+
+      const section = document.createElement('div');
+      section.id = 'liveCommunityProblems';
+      section.style.marginTop = '20px';
+
+      const title = document.createElement('h3');
+      title.textContent = 'Community submissions';
+      section.appendChild(title);
+
+      if (!data.problems.length) {
+        const empty = document.createElement('p');
+        empty.className = 'muted';
+        empty.textContent = 'No community submissions yet. Be the first to share a problem.';
+        section.appendChild(empty);
+      }
+
+      data.problems.forEach(item => {
+        const card = document.createElement('article');
+        card.className = 'map-card';
+
+        const tag = document.createElement('span');
+        tag.className = 'map-tag';
+        tag.textContent = item.category || 'Other';
+
+        const heading = document.createElement('h3');
+        heading.textContent = item.title || 'Untitled problem';
+
+        const description = document.createElement('p');
+        description.textContent = item.details || '';
+
+        const meta = document.createElement('div');
+        meta.className = 'map-meta';
+        meta.textContent = (item.status || 'Open') +
+          (item.created_at ? ' · ' + new Date(item.created_at).toLocaleDateString() : '');
+
+        const button = document.createElement('button');
+        button.className = 'btn ghost';
+        button.type = 'button';
+        button.textContent = 'Explore in MindMesh ↗';
+        button.addEventListener('click', () => {
+          const meshProblem = document.getElementById('meshProblem');
+          if (meshProblem) meshProblem.value = (item.title || '') + ': ' + (item.details || '');
+          document.getElementById('mindmesh').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        card.append(tag, heading, description, meta, button);
+        section.appendChild(card);
+      });
+
       host.parentElement.appendChild(section);
-    }catch(_){}
+    } catch (_) {
+      // Keep the sample catalogue visible if the backend is temporarily unavailable.
+    }
   }
+  window.nexusReloadCommunityProblems = loadCommunityProblems;
   loadCommunityProblems();
 })();
 </script>
