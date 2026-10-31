@@ -98,7 +98,7 @@ export default {
            .slice(0, 5)
            .map(item => item.row);
          }
-         memoryStatus = selectedMemories.length ? "used" : "no_match";
+         memoryStatus = selectedMemories.length ? "retrieved" : "no_match";
         } else {
          memoryStatus = "unavailable";
         }
