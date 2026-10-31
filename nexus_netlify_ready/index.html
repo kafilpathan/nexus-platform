@@ -1387,7 +1387,15 @@ status.setAttribute("aria-label", "Problem status");
   try {
    const {data,error}=await db.auth.getSession();
    if(error || !data.session || !data.session.access_token) return null;
-   return data.session.access_token;
+   let session=data.session;
+   const expiresAt=Number(session.expires_at)||0;
+   const now=Math.floor(Date.now()/1000);
+   if(expiresAt && expiresAt <= now+90) {
+    const refreshed=await db.auth.refreshSession();
+    if(refreshed.error || !refreshed.data?.session?.access_token) return null;
+    session=refreshed.data.session;
+   }
+   return session.access_token;
   } catch (_) { return null; }
  };
 
