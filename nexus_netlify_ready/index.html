@@ -976,7 +976,7 @@ document.getElementById('copySubmission').addEventListener('click', async functi
  function persist(){try{localStorage.setItem(KEY,JSON.stringify(cycles.slice(0,20)));}catch(_){status.textContent="This browser could not save the local evolution log.";}}
  function refresh(){history.replaceChildren();if(!cycles.length){const o=document.createElement("option");o.value="";o.textContent="No saved cycles yet";history.append(o);return;}cycles.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=(c.project||"Untitled project")+" · "+new Date(c.createdAt).toLocaleString();history.append(o);});}
  function show(c){current=c;result.textContent=c.blueprint;output.style.display="block";output.scrollIntoView({behavior:"smooth",block:"nearest"});}
- const cloudMemoryKey="NEXUS Evolution Cloud Log";
+ const cloudMemoryPrefix="NEXUS Evolution ";
  async function cloudAdmin(){
   const client=window.nexusSupabaseClient;if(!client)return null;
   const {data:{user},error}=await client.auth.getUser();if(error||!user)return null;
@@ -987,27 +987,34 @@ document.getElementById('copySubmission').addEventListener('click', async functi
  async function loadCloudCycles(){
   try{
    const auth=await cloudAdmin();if(!auth)return;
-   const {data,error}=await auth.client.from("nexus_memory").select("memory_value").eq("owner_id",auth.user.id).eq("memory_key",cloudMemoryKey).maybeSingle();
+   const {data,error}=await auth.client.from("nexus_memory")
+    .select("memory_key,memory_value,updated_at")
+    .eq("owner_id",auth.user.id).like("memory_key",cloudMemoryPrefix+"%")
+    .order("updated_at",{ascending:false}).limit(20);
    if(error)throw error;
-   if(data?.memory_value){
-    const remote=JSON.parse(data.memory_value);
-    if(Array.isArray(remote)){
-     const merged=new Map();
-     [...remote,...cycles].forEach(c=>{if(c&&c.id&&typeof c.blueprint==="string")merged.set(c.id,c);});
-     cycles=[...merged.values()].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,20);
-     persist();refresh();
-    }
-   }
+   const remote=(data||[]).flatMap(row=>{
+    try{const item=JSON.parse(row.memory_value);return item&&item.id&&typeof item.blueprint==="string"?[item]:[];}
+    catch(_){return [];}
+   });
+   const merged=new Map();
+   [...remote,...cycles].forEach(c=>{if(c&&c.id&&typeof c.blueprint==="string")merged.set(c.id,c);});
+   cycles=[...merged.values()].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,20);
+   persist();refresh();
    status.textContent="Evolution history synced for this admin account; this browser also keeps a local copy.";
   }catch(_){status.textContent="Cloud sync unavailable right now; your local evolution history is safe.";}
  }
  async function saveCloudCycles(){
   const auth=await cloudAdmin();if(!auth)return false;
-  const compact=cycles.slice(0,8).map(c=>({...c,blueprint:String(c.blueprint||"").slice(0,10000)}));
-  const {error}=await auth.client.from("nexus_memory").upsert({
-   owner_id:auth.user.id,memory_key:cloudMemoryKey,memory_value:JSON.stringify(compact),
-   category:"project",updated_at:new Date().toISOString()
-  },{onConflict:"owner_id,memory_key"});
+  const records=cycles.slice(0,8).map(c=>{
+   const item={
+    id:String(c.id).slice(0,80),project:String(c.project||"").slice(0,120),
+    objective:String(c.objective||"").slice(0,300),directive:String(c.directive||"").slice(0,300),
+    blueprint:String(c.blueprint||"").slice(0,2800),createdAt:Number(c.createdAt)||Date.now()
+   };
+   return {owner_id:auth.user.id,memory_key:cloudMemoryPrefix+item.id,memory_value:JSON.stringify(item),
+    category:"project",updated_at:new Date(item.createdAt).toISOString()};
+  });
+  const {error}=await auth.client.from("nexus_memory").upsert(records,{onConflict:"owner_id,memory_key"});
   if(error)throw error;
   return true;
  }
