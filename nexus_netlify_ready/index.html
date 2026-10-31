@@ -976,7 +976,43 @@ document.getElementById('copySubmission').addEventListener('click', async functi
  function persist(){try{localStorage.setItem(KEY,JSON.stringify(cycles.slice(0,20)));}catch(_){status.textContent="This browser could not save the local evolution log.";}}
  function refresh(){history.replaceChildren();if(!cycles.length){const o=document.createElement("option");o.value="";o.textContent="No saved cycles yet";history.append(o);return;}cycles.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=(c.project||"Untitled project")+" · "+new Date(c.createdAt).toLocaleString();history.append(o);});}
  function show(c){current=c;result.textContent=c.blueprint;output.style.display="block";output.scrollIntoView({behavior:"smooth",block:"nearest"});}
+ const cloudMemoryKey="NEXUS Evolution Cloud Log";
+ async function cloudAdmin(){
+  const client=window.nexusSupabaseClient;if(!client)return null;
+  const {data:{user},error}=await client.auth.getUser();if(error||!user)return null;
+  const {data:admin,error:adminError}=await client.from("nexus_admins").select("user_id").eq("user_id",user.id).maybeSingle();
+  if(adminError||!admin)return null;
+  return {client,user};
+ }
+ async function loadCloudCycles(){
+  try{
+   const auth=await cloudAdmin();if(!auth)return;
+   const {data,error}=await auth.client.from("nexus_memory").select("memory_value").eq("owner_id",auth.user.id).eq("memory_key",cloudMemoryKey).maybeSingle();
+   if(error)throw error;
+   if(data?.memory_value){
+    const remote=JSON.parse(data.memory_value);
+    if(Array.isArray(remote)){
+     const merged=new Map();
+     [...remote,...cycles].forEach(c=>{if(c&&c.id&&typeof c.blueprint==="string")merged.set(c.id,c);});
+     cycles=[...merged.values()].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,20);
+     persist();refresh();
+    }
+   }
+   status.textContent="Evolution history synced for this admin account; this browser also keeps a local copy.";
+  }catch(_){status.textContent="Cloud sync unavailable right now; your local evolution history is safe.";}
+ }
+ async function saveCloudCycles(){
+  const auth=await cloudAdmin();if(!auth)return false;
+  const compact=cycles.slice(0,8).map(c=>({...c,blueprint:String(c.blueprint||"").slice(0,10000)}));
+  const {error}=await auth.client.from("nexus_memory").upsert({
+   owner_id:auth.user.id,memory_key:cloudMemoryKey,memory_value:JSON.stringify(compact),
+   category:"project",updated_at:new Date().toISOString()
+  },{onConflict:"owner_id,memory_key"});
+  if(error)throw error;
+  return true;
+ }
  refresh();
+ loadCloudCycles();
  run.addEventListener("click",async()=>{
   const project=$("ev-project").value.trim()||"Untitled NEXUS project",objective=$("ev-objective").value.trim(),directive=$("ev-direction").value.trim();
   if(objective.length<25){status.textContent="Vision ko thoda detail mein likho (minimum 25 characters).";$("ev-objective").focus();return;}
@@ -999,7 +1035,9 @@ document.getElementById('copySubmission').addEventListener('click', async functi
    let data;try{data=await response.json();}catch(_){throw new Error("AI service returned an unreadable response.");}
    if(!response.ok||!data.success||typeof data.reply!=="string")throw new Error(data.error||"Evolution cycle failed.");
    const item={id:(crypto.randomUUID?crypto.randomUUID():"ev-"+Date.now()),project,objective,directive,blueprint:data.reply,createdAt:Date.now()};
-   cycles.unshift(item);cycles=cycles.slice(0,20);persist();refresh();history.value=item.id;show(item);status.textContent="Evolution blueprint generated and saved in this browser.";
+   cycles.unshift(item);cycles=cycles.slice(0,20);persist();refresh();history.value=item.id;show(item);
+   try{const cloudSaved=await saveCloudCycles();status.textContent=cloudSaved?"Evolution blueprint saved in this browser and synced to your NEXUS admin account.":"Evolution blueprint saved locally. Sign in as a NEXUS admin to enable account cloud sync.";}
+   catch(_){status.textContent="Evolution blueprint saved locally; cloud sync failed. Your local copy is safe.";}
   }catch(e){status.textContent="Cycle failed: "+e.message;}
   finally{run.disabled=false;run.textContent="✦ RUN EVOLUTION CYCLE";}
  });
