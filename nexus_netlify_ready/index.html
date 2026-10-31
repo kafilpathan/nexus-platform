@@ -1594,7 +1594,10 @@ status.setAttribute("aria-label", "Problem status");
    memoryBadge.style.display = "block";
    memoryBadge.style.marginTop = "8px";
    memoryBadge.style.opacity = "0.72";
-   memoryBadge.textContent = "Memory: " + memory.status + " · " + (Number(memory.count) || 0) + " match(es)";
+   const stage = typeof memory.stage === "string" && memory.stage !== "none" ? " · " + memory.stage : "";
+   const httpStatus = Number.isInteger(Number(memory.httpStatus)) && Number(memory.httpStatus) > 0
+    ? " · HTTP " + Number(memory.httpStatus) : "";
+   memoryBadge.textContent = "Memory: " + memory.status + stage + httpStatus + " · " + (Number(memory.count) || 0) + " match(es)";
    bubble.appendChild(memoryBadge);
   }
   messagesEl.appendChild(bubble);
@@ -1690,7 +1693,12 @@ status.setAttribute("aria-label", "Problem status");
    }
    pending.textContent = data.reply;
    const memory = data.memory && typeof data.memory.status === "string"
-    ? { status: data.memory.status, count: Number(data.memory.count) || 0 }
+    ? {
+     status: data.memory.status,
+     count: Number(data.memory.count) || 0,
+     stage: typeof data.memory.stage === "string" ? data.memory.stage : "",
+     httpStatus: Number(data.memory.httpStatus) || 0
+    }
     : null;
    chat.messages.push({ role: "assistant", content: data.reply, createdAt: Date.now(), memory });
   } catch (error) {
