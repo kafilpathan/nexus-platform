@@ -1510,7 +1510,7 @@ status.setAttribute("aria-label", "Problem status");
    memoryBadge.style.display = "block";
    memoryBadge.style.marginTop = "8px";
    memoryBadge.style.opacity = "0.72";
-   memoryBadge.textContent = "Memory: " + memory.status + " · " + (Number(memory.count) || 0) + " match(es)";
+   memoryBadge.textContent = "Memory: " + memory.status + " · " + (Number(memory.count) || 0) + " match(es)" + (memory.stage && memory.stage !== "none" ? " · " + memory.stage : "") + (Number.isInteger(Number(memory.httpStatus)) && memory.httpStatus !== null ? " · HTTP " + memory.httpStatus : "");
    bubble.appendChild(memoryBadge);
   }
   messagesEl.appendChild(bubble);
@@ -1593,7 +1593,7 @@ status.setAttribute("aria-label", "Problem status");
    const response = await fetch(API_URL, {
     method: "POST",
     headers: requestHeaders,
-    body: JSON.stringify({ message, messages: context, useMemory: Boolean(accessToken) })
+    body: JSON.stringify({ message, messages: context, useMemory: Boolean(document.getElementById("kafai-use-memory")?.checked) })
    });
    let data;
    try { data = await response.json(); }
