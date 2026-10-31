@@ -54,7 +54,7 @@ export default {
     let memoryStage = "none";
     let memoryHttpStatus = null;
     const authHeader = request.headers.get("Authorization") || "";
-    const bearer = authHeader.match(/^Bearer\\s+(.+)$/i);
+    const bearer = authHeader.match(/^Bearer\s+(.+)$/i);
     if (body.useMemory === true && !bearer) {
      memoryStatus = "missing_token";
      memoryStage = "request";
@@ -63,7 +63,7 @@ export default {
      memoryStage = "worker_config";
     } else if (body.useMemory === true) {
      try {
-      const supabaseUrl = env.SUPABASE_URL.replace(/\\/$/, "");
+      const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, "");
       const token = bearer[1];
       memoryStage = "auth";
       const userResponse = await fetch(supabaseUrl + "/auth/v1/user", {
