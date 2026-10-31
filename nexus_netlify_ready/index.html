@@ -772,6 +772,133 @@ document.getElementById('copySubmission').addEventListener('click', async functi
   render();
 })();
 </script>
+
+<!-- NEXUS SOLUTION STUDIO -->
+<style>
+#nexus-solution-studio{max-width:1040px;margin:34px auto;padding:clamp(18px,4vw,32px);border:1px solid #33415f;border-radius:22px;background:radial-gradient(circle at 90% 0%,#243b61 0%,#111827 48%,#0b1220 100%);color:#f5f7ff;box-shadow:0 18px 55px #02061755}
+#nexus-solution-studio .nss-kicker{color:#82e6d6;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:800}
+#nexus-solution-studio h2{font-size:clamp(25px,4vw,36px);margin:10px 0}
+#nexus-solution-studio .nss-intro{color:#c4cde0;max-width:720px;line-height:1.65}
+#nexus-solution-studio textarea{box-sizing:border-box;width:100%;min-height:125px;resize:vertical;padding:15px;border:1px solid #475675;border-radius:13px;background:#080f1d;color:#fff;font:inherit;line-height:1.5;outline:none}
+#nexus-solution-studio textarea:focus{border-color:#82e6d6;box-shadow:0 0 0 3px #82e6d622}
+#nexus-solution-studio .nss-samples{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
+#nexus-solution-studio .nss-samples button,#nexus-solution-studio .nss-secondary{border:1px solid #465575;background:#17243a;color:#dce7ff;border-radius:999px;padding:8px 12px;cursor:pointer}
+#nexus-solution-studio .nss-primary{border:0;border-radius:11px;background:#82e6d6;color:#071522;padding:12px 18px;font-weight:800;cursor:pointer}
+#nexus-solution-studio button:disabled{opacity:.55;cursor:wait}
+#nexus-solution-studio .nss-result{display:none;margin-top:22px;padding:18px;border:1px solid #3b526d;border-radius:15px;background:#080f1dcc}
+#nexus-solution-studio .nss-result pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.65;color:#e7edf8;margin:12px 0}
+#nexus-solution-studio .nss-actions{display:flex;gap:9px;flex-wrap:wrap}
+#nexus-solution-studio .nss-status{min-height:22px;color:#a9b9d4;font-size:13px;margin:10px 0 0}
+#nexus-solution-studio .nss-privacy{font-size:12px;color:#9eacc5;margin-top:12px}
+</style>
+<section id="nexus-solution-studio" aria-labelledby="nss-title">
+  <div class="nss-kicker">NEXUS Intelligence Lab · New</div>
+  <h2 id="nss-title">Turn a problem into a plan.</h2>
+  <p class="nss-intro">Describe a challenge. KAF-AI will break it into likely causes, practical next steps, risks to watch, and a way to measure progress. Treat the output as a starting point—not expert or emergency advice.</p>
+  <form id="nss-form">
+    <label for="nss-problem"><strong>What problem should we work on?</strong></label>
+    <textarea id="nss-problem" maxlength="1800" required placeholder="Example: Our college club has good ideas but very few students participate. How can we improve engagement with almost no budget?"></textarea>
+    <div class="nss-samples" aria-label="Example challenges">
+      <button type="button" data-nss-prompt="How can a college club increase student participation with almost no budget?">Student engagement</button>
+      <button type="button" data-nss-prompt="How can a small team organise and track a community clean-up project?">Community project</button>
+      <button type="button" data-nss-prompt="How can I plan a beginner-friendly study group that stays consistent?">Study group</button>
+    </div>
+    <button class="nss-primary" id="nss-generate" type="submit">✦ Generate action plan</button>
+    <p class="nss-privacy">Please don't enter passwords, private contact details, medical records, or other sensitive information. Your prompt is sent to the NEXUS AI service for this request.</p>
+    <p class="nss-status" id="nss-status" role="status" aria-live="polite"></p>
+  </form>
+  <div class="nss-result" id="nss-result" aria-live="polite">
+    <h3>Your NEXUS action brief</h3>
+    <pre id="nss-output"></pre>
+    <div class="nss-actions">
+      <button class="nss-secondary" type="button" id="nss-copy">Copy action brief</button>
+      <button class="nss-secondary" type="button" id="nss-again">Refine with another prompt</button>
+    </div>
+  </div>
+</section>
+<script>
+(() => {
+  const form = document.getElementById("nss-form");
+  if (!form || form.dataset.ready === "true") return;
+  form.dataset.ready = "true";
+  const input = document.getElementById("nss-problem");
+  const generate = document.getElementById("nss-generate");
+  const status = document.getElementById("nss-status");
+  const result = document.getElementById("nss-result");
+  const output = document.getElementById("nss-output");
+  const endpoint = "https://nexus-kaf-ai.kumarchotu36553.workers.dev/api/chat";
+
+  document.querySelectorAll("[data-nss-prompt]").forEach(button => {
+    button.addEventListener("click", () => {
+      input.value = button.dataset.nssPrompt || "";
+      input.focus();
+    });
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const problem = input.value.trim();
+    if (problem.length < 12) {
+      status.textContent = "Please describe the challenge in at least 12 characters.";
+      input.focus();
+      return;
+    }
+    generate.disabled = true;
+    generate.textContent = "Analysing your challenge…";
+    status.textContent = "KAF-AI is building your action brief.";
+    result.style.display = "none";
+
+    const prompt =
+      "Act as the NEXUS Solution Studio. Analyse this challenge: " + problem +
+      "\n\nReturn a practical, concise action brief using exactly these headings:" +
+      "\n1. PROBLEM SNAPSHOT — restate the challenge and identify what is unknown." +
+      "\n2. ROOT-CAUSE HYPOTHESES — up to 3 plausible causes; label them as hypotheses, not facts." +
+      "\n3. FIRST 3 ACTIONS — concrete, low-cost steps in priority order." +
+      "\n4. RISKS & SAFEGUARDS — realistic risks and ways to reduce them." +
+      "\n5. SUCCESS METRIC — one measurable signal and a sensible review point." +
+      "\n6. ONE QUESTION — the single most useful question to improve this plan." +
+      "\nAvoid inventing facts, keep advice age-appropriate and safe, and say when expert help is needed.";
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ message: prompt })
+      });
+      let data;
+      try { data = await response.json(); }
+      catch (_) { throw new Error("The AI service returned an unreadable response."); }
+      if (!response.ok || !data.success || typeof data.reply !== "string") {
+        throw new Error(data.error || "Could not generate the action brief.");
+      }
+      output.textContent = data.reply;
+      result.style.display = "block";
+      status.textContent = "Action brief ready. Review the assumptions before acting.";
+      result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (error) {
+      status.textContent = "Could not generate a plan: " + error.message;
+    } finally {
+      generate.disabled = false;
+      generate.textContent = "✦ Generate action plan";
+    }
+  });
+
+  document.getElementById("nss-copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(output.textContent);
+      status.textContent = "Action brief copied.";
+    } catch (_) {
+      status.textContent = "Copy unavailable in this browser. Select the brief text to copy it.";
+    }
+  });
+
+  document.getElementById("nss-again").addEventListener("click", () => {
+    result.style.display = "none";
+    input.focus();
+  });
+})();
+</script>
+
   <!-- NEXUS ADMIN ACCESS -->
 <style>
 #nexusAdminLauncher{position:fixed;right:16px;bottom:16px;z-index:9000}
