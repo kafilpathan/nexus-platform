@@ -1600,7 +1600,7 @@ status.setAttribute("aria-label", "Problem status");
   render();
  }
 
- function addBubble(text, role, memory) {
+ function addBubble(text, role, memory, onSave) {
   const bubble = document.createElement("div");
   bubble.className = "kafai-msg " + (role === "user" ? "kafai-user" : "kafai-bot");
   bubble.textContent = text;
@@ -1615,9 +1615,54 @@ status.setAttribute("aria-label", "Problem status");
    memoryBadge.textContent = "Memory: " + memory.status + stage + httpStatus + " · " + (Number(memory.count) || 0) + " match(es)";
    bubble.appendChild(memoryBadge);
   }
+  if (role === "assistant" && typeof onSave === "function") {
+   const saveButton = document.createElement("button");
+   saveButton.type = "button";
+   saveButton.className = "kafai-save-memory";
+   saveButton.textContent = "Save exchange to Memory";
+   saveButton.style.cssText = "display:block;margin-top:9px;padding:6px 9px;border:1px solid #74f0e3;border-radius:8px;background:transparent;color:#74f0e3;font-size:11px;cursor:pointer";
+   saveButton.onclick = async () => {
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving…";
+    try {
+     await onSave();
+     saveButton.textContent = "Saved to Memory ✓";
+     saveButton.title = "This exchange is saved to your NEXUS Memory.";
+    } catch (error) {
+     saveButton.disabled = false;
+     saveButton.textContent = "Save exchange to Memory";
+     saveButton.title = error && error.message ? error.message : "Could not save this exchange.";
+    }
+   };
+   bubble.appendChild(saveButton);
+  }
   messagesEl.appendChild(bubble);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return bubble;
+ }
+
+ async function saveExchange(chat, userText, assistantText, assistantItem) {
+  const db = window.nexusSupabaseClient;
+  if (!db) throw new Error("Supabase client is unavailable. Sign in through Admin Login first.");
+  const { data: { user }, error: authError } = await db.auth.getUser();
+  if (authError || !user) throw new Error("Sign in through Admin Login before saving memory.");
+  const { data: admin, error: adminError } = await db.from("nexus_admins")
+   .select("user_id").eq("user_id", user.id).maybeSingle();
+  if (adminError || !admin) throw new Error("This account is not authorised for the NEXUS Memory Core.");
+  const createdAt = Number(assistantItem.createdAt) || Date.now();
+  const memoryKey = ("Chat " + String(chat.id).slice(0, 12) + " " + createdAt).slice(0, 100);
+  const memoryValue = ("User: " + String(userText).slice(0, 900) +
+   "\nKAF-AI: " + String(assistantText).slice(0, 1400)).slice(0, 2400);
+  const { error } = await db.from("nexus_memory").upsert({
+   owner_id: user.id,
+   memory_key: memoryKey,
+   memory_value: memoryValue,
+   category: "conversation",
+   updated_at: new Date(createdAt).toISOString()
+  }, { onConflict: "owner_id,memory_key" });
+  if (error) throw new Error(error.message || "Memory save failed.");
+  assistantItem.memorySaved = true;
+  persist();
  }
 
  function render() {
@@ -1630,7 +1675,13 @@ status.setAttribute("aria-label", "Problem status");
    if (!chat.messages.length) {
     addBubble("Hello! I am KAF-AI. How can I help you?", "assistant");
    } else {
-    chat.messages.forEach(item => addBubble(item.content, item.role, item.memory));
+    chat.messages.forEach((item, index) => {
+     const previous = index > 0 ? chat.messages[index - 1] : null;
+     const saveAction = item.role === "assistant" && previous?.role === "user" && !item.memorySaved
+      ? () => saveExchange(chat, previous.content, item.content, item)
+      : null;
+     addBubble(item.content, item.role, item.memory, saveAction);
+    });
    }
   }
 
