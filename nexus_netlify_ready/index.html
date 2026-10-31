@@ -1547,6 +1547,14 @@ status.setAttribute("aria-label", "Problem status");
     throw new Error(data.error || "Request failed");
    }
    pending.textContent = data.reply;
+   if (data.memory && typeof data.memory.status === "string") {
+    const memoryBadge = document.createElement("small");
+    memoryBadge.style.display = "block";
+    memoryBadge.style.marginTop = "8px";
+    memoryBadge.style.opacity = "0.72";
+    memoryBadge.textContent = "Memory: " + data.memory.status + " · " + (Number(data.memory.count) || 0) + " match(es)";
+    pending.appendChild(memoryBadge);
+   }
    chat.messages.push({ role: "assistant", content: data.reply, createdAt: Date.now() });
   } catch (error) {
    const errorText = "Connection error: " + error.message;
