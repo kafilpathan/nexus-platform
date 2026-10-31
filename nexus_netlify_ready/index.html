@@ -1123,10 +1123,11 @@ document.getElementById('copySubmission').addEventListener('click', async functi
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (() => {
- const client = window.supabase.createClient(
+ // Share one Supabase client across Admin Login, Memory Core and chat.
+ const client = window.nexusSupabaseClient || (window.nexusSupabaseClient = window.supabase.createClient(
   "https://rgrbeuwwomejbrstopcr.supabase.co",
   "sb_publishable_MY6nsHoJdvfxqHTvp-Hnkw_NXPF02eJ"
- );
+ ));
 
  const overlay=document.getElementById("nexusAdminOverlay");
  const login=document.getElementById("nexusAdminLogin");
@@ -1223,10 +1224,11 @@ status.setAttribute("aria-label", "Problem status");
 <script>
 (() => {
  const API_URL = "https://nexus-kaf-ai.kumarchotu36553.workers.dev/api/chat";
- const db = window.supabase.createClient(
+ // Reuse the exact client instance that Admin Login authenticated.
+ const db = window.nexusSupabaseClient || (window.nexusSupabaseClient = window.supabase.createClient(
   "https://rgrbeuwwomejbrstopcr.supabase.co",
   "sb_publishable_MY6nsHoJdvfxqHTvp-Hnkw_NXPF02eJ"
- );
+ ));
  const $ = id => document.getElementById(id);
  const memoryStatus = $("ni-memory-status");
  const memoryList = $("ni-memory-list");
