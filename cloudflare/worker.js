@@ -51,21 +51,32 @@ export default {
     // then PostgREST runs with that same user's JWT so nexus_memory RLS applies.
     let selectedMemories = [];
     let memoryStatus = "not_requested";
+    let memoryStage = "none";
+    let memoryHttpStatus = null;
     const authHeader = request.headers.get("Authorization") || "";
-    const bearer = authHeader.match(/^Bearer\s+(.+)$/i);
-    if (body.useMemory === true && bearer && env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY) {
+    const bearer = authHeader.match(/^Bearer\\s+(.+)$/i);
+    if (body.useMemory === true && !bearer) {
+     memoryStatus = "missing_token";
+     memoryStage = "request";
+    } else if (body.useMemory === true && (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY)) {
+     memoryStatus = "missing_config";
+     memoryStage = "worker_config";
+    } else if (body.useMemory === true) {
      try {
-      const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, "");
+      const supabaseUrl = env.SUPABASE_URL.replace(/\\/$/, "");
       const token = bearer[1];
+      memoryStage = "auth";
       const userResponse = await fetch(supabaseUrl + "/auth/v1/user", {
        headers: {
         "apikey": env.SUPABASE_PUBLISHABLE_KEY,
         "Authorization": "Bearer " + token
        }
       });
+      memoryHttpStatus = userResponse.status;
       if (userResponse.ok) {
        const user = await userResponse.json();
        if (user && typeof user.id === "string") {
+        memoryStage = "database";
         const params = new URLSearchParams({
          select: "category,memory_key,memory_value,updated_at",
          owner_id: "eq." + user.id,
@@ -79,42 +90,36 @@ export default {
           "Accept": "application/json"
          }
         });
+        memoryHttpStatus = memoryResponse.status;
         if (memoryResponse.ok) {
          const rows = await memoryResponse.json();
-         const stop = new Set(["the","and","for","with","from","that","this","have","your","you","are","was","were","what","when","where","how","why","can","could","should","would","about","into","their","them","then","than","our","out","use","using","please","help","make","does","did","has","had","will","shall","not","but","all","any","who","its","it's"]);
-         const terms = text => new Set((text.toLowerCase().match(/[a-z0-9]{3,}/g) || []).filter(word => !stop.has(word)));
-         const queryText = [message, ...history.filter(item => item.role === "user").slice(-3).map(item => item.content)].join(" ");
-         const queryTerms = terms(queryText);
-         if (queryTerms.size) {
-          selectedMemories = (Array.isArray(rows) ? rows : [])
-           .map(row => {
-            const memoryTerms = terms((row.memory_key || "") + " " + (row.memory_value || "") + " " + (row.category || ""));
-            let overlap = 0;
-            queryTerms.forEach(term => { if (memoryTerms.has(term)) overlap++; });
-            return { row, score: overlap / Math.sqrt(Math.max(1, queryTerms.size) * Math.max(1, memoryTerms.size)) };
-           })
-           .filter(item => item.score > 0)
-           .sort((a,b) => b.score - a.score)
-           .slice(0, 5)
-           .map(item => item.row);
-         }
+         const queryTerms = new Set(message.toLowerCase().split(/[^a-z0-9]+/).filter(term => term.length > 2));
+         selectedMemories = rows
+          .map(row => {
+           const text = (String(row.memory_key || "") + " " + String(row.memory_value || "")).toLowerCase();
+           const memoryTerms = new Set(text.split(/[^a-z0-9]+/).filter(term => term.length > 2));
+           let overlap = 0;
+           queryTerms.forEach(term => { if (memoryTerms.has(term)) overlap++; });
+           return { row, score: overlap / Math.sqrt(Math.max(1, queryTerms.size) * Math.max(1, memoryTerms.size)) };
+          })
+          .filter(item => item.score > 0)
+          .sort((a,b) => b.score - a.score)
+          .slice(0, 5)
+          .map(item => item.row);
          memoryStatus = selectedMemories.length ? "retrieved" : "no_match";
         } else {
-         memoryStatus = "unavailable";
+         memoryStatus = "database_rejected";
         }
        } else {
-        memoryStatus = "unauthenticated";
+        memoryStatus = "invalid_auth_response";
        }
       } else {
-       memoryStatus = "unauthenticated";
+       memoryStatus = "auth_rejected";
       }
      } catch (_) {
-      // Memory failures must not take down ordinary chat; never log tokens or memory text.
-      memoryStatus = "unavailable";
-      selectedMemories = [];
+      // Do not log tokens, user identifiers, memory contents, or upstream response bodies.
+      memoryStatus = "service_error";
      }
-    } else if (body.useMemory === true) {
-     memoryStatus = "unavailable";
     }
 
     const memoryContext = selectedMemories.length
@@ -144,7 +149,7 @@ export default {
     return json({
      success: true,
      reply: answer || "No response generated.",
-     memory: { status: memoryStatus, count: selectedMemories.length }
+     memory: { status: memoryStatus, count: selectedMemories.length, stage: memoryStage, httpStatus: memoryHttpStatus }
     });
    } catch (_) {
     return json({ success: false, error: "AI request failed. Please try again." }, 500);
