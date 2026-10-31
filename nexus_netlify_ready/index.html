@@ -70,7 +70,7 @@ footer{border-top:1px solid var(--line);padding:27px 0;margin-top:65px;color:#8c
   <nav>
     <a class="brand" href="#top" aria-label="NEXUS home"><span class="logo">N</span><span>NEXUS</span></a>
     <div class="navlinks"><a href="#mission">Mission</a><a href="#how">How it works</a><a href="#submit">Submit a problem</a><a href="#mindmesh">MindMesh</a><a href="#impossible">Impossible Button</a><a href="#evolution">Solution Evolution</a><a href="#globalmap">Global Problem Map</a><a href="#project">Our project</a><a href="#solutions">Solution lab</a><a href="#team">Our team</a><a href="#about">About</a></div>
-    <a class="btn ghost" href="#join">Join the mission ↗</a>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" class="btn ghost" id="nexusAdminNavOpen">Admin Login</button><a class="btn ghost" href="#join">Join the mission ↗</a></div>
   </nav>
 </header>
 <main id="top">
@@ -829,6 +829,7 @@ document.getElementById('copySubmission').addEventListener('click', async functi
  const say=t=>msg.textContent=t;
 
  document.getElementById("nexusAdminOpen").onclick=()=>overlay.classList.add("open");
+ document.getElementById("nexusAdminNavOpen").onclick=()=>overlay.classList.add("open");
  document.getElementById("nexusAdminClose").onclick=()=>overlay.classList.remove("open");
 
  async function verifyAdmin(){
