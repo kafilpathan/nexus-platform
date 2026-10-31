@@ -1292,6 +1292,16 @@ status.setAttribute("aria-label", "Problem status");
  };
  $("ni-memory-refresh").onclick=loadMemories;
 
+ // The chat UI receives only the current user's access token; the Worker verifies it.
+ // The token is never stored in chat history or sent to the model.
+ window.nexusGetChatSessionToken = async function() {
+  try {
+   const {data,error}=await db.auth.getSession();
+   if(error || !data.session || !data.session.access_token) return null;
+   return data.session.access_token;
+  } catch (_) { return null; }
+ };
+
  const agents = [
   {id:"strategy",name:"STRATEGY AGENT",role:"You are the NEXUS Strategy Agent. Define the north-star outcome, users, value proposition, priorities, trade-offs and measurable success criteria. Separate evidence from assumptions. Give a concise decision brief."},
   {id:"architect",name:"SYSTEM ARCHITECT AGENT",role:"You are the NEXUS System Architect. Propose a practical modular architecture, data flow, interfaces, failure handling, accessibility and free-first implementation plan. Do not claim integrations exist unless described."},
@@ -1371,6 +1381,10 @@ status.setAttribute("aria-label", "Problem status");
 </div>
 <div id="kafai-messages" aria-live="polite"></div>
 <div id="kafai-note">Chats are saved only in this browser on this device.</div>
+<label id="kafai-memory-toggle" style="display:flex;align-items:center;gap:7px;padding:0 12px 8px;color:#b8c6dc;font-size:11px">
+ <input type="checkbox" id="kafai-use-memory" checked>
+ Use my saved NEXUS memories when signed in
+</label>
 <form id="kafai-form">
 <input id="kafai-input" placeholder="Message KAF-AI..." maxlength="4000" autocomplete="off" required>
 <button type="submit" id="kafai-send">Send</button>
@@ -1515,10 +1529,16 @@ status.setAttribute("aria-label", "Problem status");
     role: item.role,
     content: item.content
    }));
+   let accessToken = null;
+   if (document.getElementById("kafai-use-memory")?.checked && typeof window.nexusGetChatSessionToken === "function") {
+    accessToken = await window.nexusGetChatSessionToken();
+   }
+   const requestHeaders = { "Content-Type": "application/json", "Accept": "application/json" };
+   if (accessToken) requestHeaders.Authorization = "Bearer " + accessToken;
    const response = await fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Accept": "application/json" },
-    body: JSON.stringify({ message, messages: context })
+    headers: requestHeaders,
+    body: JSON.stringify({ message, messages: context, useMemory: Boolean(accessToken) })
    });
    let data;
    try { data = await response.json(); }
