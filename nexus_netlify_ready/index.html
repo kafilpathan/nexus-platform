@@ -912,92 +912,210 @@ status.setAttribute("aria-label", "Problem status");
  };
 })();
 </script>
-  <!-- NEXUS KAF-AI CHAT -->
+  <!-- NEXUS KAF-AI CHAT: local conversation history + context -->
 <style>
 #kafai-launch{position:fixed;left:16px;bottom:16px;z-index:9990}
 #kafai-launch button{padding:13px 18px;border:0;border-radius:30px;background:#74f0e3;color:#08111a;font-weight:800}
-#kafai-panel{display:none;position:fixed;left:16px;bottom:75px;z-index:9991;width:min(370px,calc(100vw - 32px));height:480px;background:#101626;color:white;border:1px solid #74f0e3;border-radius:18px;overflow:hidden;flex-direction:column}
+#kafai-panel{display:none;position:fixed;left:16px;bottom:75px;z-index:9991;width:min(390px,calc(100vw - 32px));height:min(560px,calc(100vh - 110px));background:#101626;color:white;border:1px solid #74f0e3;border-radius:18px;overflow:hidden;flex-direction:column}
 #kafai-panel.open{display:flex}
-#kafai-head{padding:14px;border-bottom:1px solid #39435d;display:flex;justify-content:space-between}
+#kafai-head{padding:12px 14px;border-bottom:1px solid #39435d;display:flex;align-items:center;justify-content:space-between;gap:10px}
+#kafai-head button,.kafai-toolbar button{cursor:pointer;border:1px solid #39435d;border-radius:8px;padding:7px 10px;background:#202a40;color:white}
+#kafai-tools{display:flex;gap:8px;padding:9px 10px;border-bottom:1px solid #29344a}
+#kafai-history{flex:1;min-width:0;padding:8px;background:#080b14;color:white;border:1px solid #39435d;border-radius:8px}
 #kafai-messages{flex:1;overflow:auto;padding:12px}
-.kafai-msg{padding:10px;margin:8px 0;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
-.kafai-bot{background:#202a40}
-.kafai-user{background:#164b4b;text-align:right}
-#kafai-form{display:flex;gap:7px;padding:10px}
+.kafai-msg{padding:10px;margin:8px 0;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:94%}
+.kafai-bot{background:#202a40;margin-right:auto}
+.kafai-user{background:#164b4b;text-align:left;margin-left:auto}
+#kafai-form{display:flex;gap:7px;padding:10px;border-top:1px solid #29344a}
 #kafai-input{flex:1;min-width:0;padding:10px;background:#080b14;color:white;border:1px solid #39435d;border-radius:9px}
-#kafai-form button{background:#74f0e3;border:0;border-radius:9px;padding:10px}
+#kafai-form button{background:#74f0e3;color:#08111a;border:0;border-radius:9px;padding:10px 14px;font-weight:800}
+#kafai-form button:disabled{opacity:.55;cursor:not-allowed}
+#kafai-note{padding:0 12px 8px;color:#93a1ba;font-size:11px}
 </style>
 
 <div id="kafai-launch">
 <button type="button" id="kafai-open">✦ Ask KAF-AI</button>
 </div>
 
-<div id="kafai-panel">
+<div id="kafai-panel" aria-label="NEXUS KAF-AI chat">
 <div id="kafai-head">
 <strong>✦ NEXUS KAF-AI</strong>
-<button type="button" id="kafai-close">✕</button>
+<button type="button" id="kafai-close" aria-label="Close chat">✕</button>
 </div>
-<div id="kafai-messages">
-<div class="kafai-msg kafai-bot">Hello! I am KAF-AI. How can I help you?</div>
+<div id="kafai-tools" class="kafai-toolbar">
+<select id="kafai-history" aria-label="Saved conversations"></select>
+<button type="button" id="kafai-new">＋ New</button>
 </div>
+<div id="kafai-messages" aria-live="polite"></div>
+<div id="kafai-note">Chats are saved only in this browser on this device.</div>
 <form id="kafai-form">
-<input id="kafai-input" placeholder="Message KAF-AI..." maxlength="4000" required>
+<input id="kafai-input" placeholder="Message KAF-AI..." maxlength="4000" autocomplete="off" required>
 <button type="submit" id="kafai-send">Send</button>
 </form>
 </div>
 
 <script>
 (() => {
- const panel=document.getElementById("kafai-panel");
- const messages=document.getElementById("kafai-messages");
- const input=document.getElementById("kafai-input");
- const send=document.getElementById("kafai-send");
+ const API_URL = "https://nexus-kaf-ai.kumarchotu36553.workers.dev/api/chat";
+ const STORAGE_KEY = "nexus_kafai_chats_v1";
+ const ACTIVE_KEY = "nexus_kafai_active_chat_v1";
+ const MAX_CHATS = 30;
+ const MAX_STORED_MESSAGES = 60;
+ const CONTEXT_MESSAGES = 12;
 
- function addMessage(text,type){
-  const div=document.createElement("div");
-  div.className="kafai-msg kafai-"+type;
-  div.textContent=text;
-  messages.appendChild(div);
-  messages.scrollTop=messages.scrollHeight;
-  return div;
+ const panel = document.getElementById("kafai-panel");
+ const messagesEl = document.getElementById("kafai-messages");
+ const input = document.getElementById("kafai-input");
+ const send = document.getElementById("kafai-send");
+ const historySelect = document.getElementById("kafai-history");
+ let chats = loadChats();
+ let activeId = localStorage.getItem(ACTIVE_KEY) || "";
+
+ function makeId() {
+  return (window.crypto && crypto.randomUUID)
+   ? crypto.randomUUID()
+   : "chat-" + Date.now() + "-" + Math.random().toString(36).slice(2, 9);
  }
 
- document.getElementById("kafai-open").onclick=()=>{
-  panel.classList.add("open");
- };
- document.getElementById("kafai-close").onclick=()=>{
-  panel.classList.remove("open");
- };
+ function loadChats() {
+  try {
+   const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+   if (!Array.isArray(parsed)) return [];
+   return parsed.filter(chat => chat && typeof chat.id === "string" && Array.isArray(chat.messages))
+    .map(chat => ({
+     id: chat.id,
+     title: typeof chat.title === "string" ? chat.title : "New conversation",
+     updatedAt: Number(chat.updatedAt) || Date.now(),
+     messages: chat.messages.filter(m => m && ["user", "assistant"].includes(m.role) && typeof m.content === "string")
+      .slice(-MAX_STORED_MESSAGES)
+    })).slice(0, MAX_CHATS);
+  } catch (_) {
+   return [];
+  }
+ }
 
- document.getElementById("kafai-form").onsubmit=async(e)=>{
-  e.preventDefault();
-  const message=input.value.trim();
-  if(!message||send.disabled)return;
+ function persist() {
+  try {
+   chats.sort((a, b) => b.updatedAt - a.updatedAt);
+   chats = chats.slice(0, MAX_CHATS);
+   localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+   if (activeId) localStorage.setItem(ACTIVE_KEY, activeId);
+  } catch (_) {
+   // Chat continues to work for this page session if browser storage is unavailable.
+  }
+ }
 
-  addMessage(message,"user");
-  input.value="";
-  send.disabled=true;
-  const pending=addMessage("Thinking...","bot");
+ function activeChat() {
+  return chats.find(chat => chat.id === activeId) || null;
+ }
 
-  try{
-   const response=await fetch(
-    "https://nexus-kaf-ai.kumarchotu36553.workers.dev/api/chat",
-    {
-     method:"POST",
-     headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({message})
-    }
-   );
-   const data=await response.json();
-   if(!response.ok||!data.success){
-    throw new Error(data.error||"Request failed");
+ function createChat() {
+  const chat = { id: makeId(), title: "New conversation", updatedAt: Date.now(), messages: [] };
+  chats.unshift(chat);
+  activeId = chat.id;
+  persist();
+  render();
+ }
+
+ function addBubble(text, role) {
+  const bubble = document.createElement("div");
+  bubble.className = "kafai-msg " + (role === "user" ? "kafai-user" : "kafai-bot");
+  bubble.textContent = text;
+  messagesEl.appendChild(bubble);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return bubble;
+ }
+
+ function render() {
+  const chat = activeChat();
+  if (!chat) {
+   messagesEl.replaceChildren();
+   addBubble("Hello! I am KAF-AI. How can I help you?", "assistant");
+  } else {
+   messagesEl.replaceChildren();
+   if (!chat.messages.length) {
+    addBubble("Hello! I am KAF-AI. How can I help you?", "assistant");
+   } else {
+    chat.messages.forEach(item => addBubble(item.content, item.role));
    }
-   pending.textContent=data.reply;
-  }catch(error){
-   pending.textContent="Connection error: "+error.message;
-  }finally{
-   send.disabled=false;
-   messages.scrollTop=messages.scrollHeight;
+  }
+
+  historySelect.replaceChildren();
+  const ordered = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
+  if (!ordered.length) {
+   const option = document.createElement("option");
+   option.value = "";
+   option.textContent = "No saved chats yet";
+   historySelect.appendChild(option);
+  } else {
+   ordered.forEach(item => {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.title || "New conversation";
+    historySelect.appendChild(option);
+   });
+   historySelect.value = activeId;
+  }
+ }
+
+ document.getElementById("kafai-open").onclick = () => panel.classList.add("open");
+ document.getElementById("kafai-close").onclick = () => panel.classList.remove("open");
+ document.getElementById("kafai-new").onclick = createChat;
+ historySelect.onchange = () => {
+  activeId = historySelect.value;
+  persist();
+  render();
+ };
+
+ if (!activeChat()) createChat();
+ else render();
+
+ document.getElementById("kafai-form").onsubmit = async event => {
+  event.preventDefault();
+  const message = input.value.trim();
+  const chat = activeChat();
+  if (!message || !chat || send.disabled) return;
+
+  chat.messages.push({ role: "user", content: message, createdAt: Date.now() });
+  if (chat.title === "New conversation") {
+   chat.title = message.length > 34 ? message.slice(0, 34) + "…" : message;
+  }
+  chat.updatedAt = Date.now();
+  input.value = "";
+  persist();
+  render();
+
+  send.disabled = true;
+  const pending = addBubble("Thinking…", "assistant");
+  try {
+   const context = chat.messages.slice(-CONTEXT_MESSAGES).map(item => ({
+    role: item.role,
+    content: item.content
+   }));
+   const response = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify({ message, messages: context })
+   });
+   let data;
+   try { data = await response.json(); }
+   catch (_) { throw new Error("The server returned an unreadable response."); }
+   if (!response.ok || !data.success || typeof data.reply !== "string") {
+    throw new Error(data.error || "Request failed");
+   }
+   pending.textContent = data.reply;
+   chat.messages.push({ role: "assistant", content: data.reply, createdAt: Date.now() });
+  } catch (error) {
+   const errorText = "Connection error: " + error.message;
+   pending.textContent = errorText;
+   chat.messages.push({ role: "assistant", content: errorText, createdAt: Date.now() });
+  } finally {
+   chat.messages = chat.messages.slice(-MAX_STORED_MESSAGES);
+   chat.updatedAt = Date.now();
+   persist();
+   render();
+   send.disabled = false;
+   input.focus();
   }
  };
 })();
