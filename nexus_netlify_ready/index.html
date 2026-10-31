@@ -899,6 +899,118 @@ document.getElementById('copySubmission').addEventListener('click', async functi
 })();
 </script>
 
+
+<!-- NEXUS EVOLUTION ENGINE -->
+<style>
+#nexus-evolution{margin:42px auto 54px;max-width:1160px;padding:clamp(20px,4vw,42px);border:1px solid #334b68;border-radius:28px;background:radial-gradient(ellipse at 80% 0%,#273e6b 0%,transparent 48%),linear-gradient(145deg,#0c1424,#080d18 72%);color:#f4f7ff;box-shadow:0 28px 90px #0007;position:relative;overflow:hidden}
+#nexus-evolution *{box-sizing:border-box}#nexus-evolution:before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,#74f0e3,#a79bff,transparent)}
+#nexus-evolution .ev-kicker{color:#7df1df;font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase}
+#nexus-evolution h2{font-size:clamp(30px,5vw,49px);line-height:1.04;letter-spacing:-.045em;margin:12px 0}
+#nexus-evolution .ev-lead{color:#bac8df;max-width:760px;line-height:1.7}
+#nexus-evolution .ev-topline,#nexus-evolution .ev-output-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#nexus-evolution .ev-live{font-size:11px;letter-spacing:.1em;color:#8cf0df;border:1px solid #3a756f;border-radius:99px;padding:7px 11px;background:#0d2928}
+#nexus-evolution .ev-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-top:26px}
+#nexus-evolution .ev-panel{border:1px solid #31415c;border-radius:18px;background:#0b1423d9;padding:19px;min-width:0}
+#nexus-evolution label{display:block;font-size:13px;font-weight:800;color:#e5edff;margin-bottom:8px}
+#nexus-evolution textarea,#nexus-evolution input,#nexus-evolution select{width:100%;background:#070d18;border:1px solid #3a4b67;color:white;border-radius:12px;padding:13px;font:inherit;outline:none}
+#nexus-evolution textarea{min-height:118px;resize:vertical}
+#nexus-evolution textarea:focus,#nexus-evolution input:focus{border-color:#7df1df;box-shadow:0 0 0 3px #7df1df20}
+#nexus-evolution .ev-small{font-size:12px;color:#91a2bf;line-height:1.55;margin-top:8px}
+#nexus-evolution .ev-primary{background:linear-gradient(110deg,#7df1df,#b9fff5);color:#07131d;border:0;border-radius:12px;padding:13px 18px;font-weight:900;cursor:pointer;width:100%;margin-top:14px}
+#nexus-evolution button:disabled{opacity:.55;cursor:wait}
+#nexus-evolution .ev-stages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:13px}
+#nexus-evolution .ev-stage{border:1px solid #2e405a;border-radius:13px;padding:12px;background:#101d30}
+#nexus-evolution .ev-stage b{display:block;font-size:12px;color:#e8f4ff}#nexus-evolution .ev-stage span{font-size:11px;color:#91a6c3}
+#nexus-evolution .ev-num{color:#7df1df;font-size:10px;letter-spacing:.1em;font-weight:900}
+#nexus-evolution .ev-history{margin-top:12px}
+#nexus-evolution .ev-status{min-height:24px;color:#a8bad6;font-size:12px;margin:12px 0 0}
+#nexus-evolution .ev-output{display:none;margin-top:20px}
+#nexus-evolution .ev-output h3{font-size:22px;margin:0}
+#nexus-evolution .ev-output pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#070d18;border:1px solid #334762;border-radius:15px;padding:20px;color:#e7efff;font:inherit;font-size:14px;line-height:1.75;max-height:680px;overflow:auto}
+#nexus-evolution .ev-tools{display:flex;gap:8px;flex-wrap:wrap}
+#nexus-evolution .ev-tools button{border:1px solid #405573;background:#15243a;color:#e5efff;border-radius:10px;padding:9px 12px;font-weight:750;cursor:pointer}
+#nexus-evolution .ev-foot{border-top:1px solid #293a54;margin-top:20px;padding-top:14px;color:#8294b2;font-size:11px;line-height:1.6}
+@media(max-width:760px){#nexus-evolution .ev-grid{grid-template-columns:1fr}#nexus-evolution{margin-left:14px;margin-right:14px}}
+</style>
+<section id="nexus-evolution" aria-labelledby="ev-title">
+ <div class="ev-topline"><div class="ev-kicker">NEXUS · KAF-AI flagship system</div><span class="ev-live">● EVOLUTION ENGINE ONLINE</span></div>
+ <h2 id="ev-title">Don't just ask AI.<br><span style="color:#7df1df">Evolve an idea.</span></h2>
+ <p class="ev-lead">A project evolution workspace. KAF-AI examines your objective through four disciplined lenses—Strategy, Architecture, Adversarial Review and Evolution—then produces a buildable next-version blueprint. Save iterations locally and evolve the same project again.</p>
+ <div class="ev-grid">
+  <div class="ev-panel">
+   <label for="ev-project">PROJECT / IDEA</label><input id="ev-project" maxlength="90" placeholder="e.g. NEXUS KAF-AI">
+   <div style="height:14px"></div><label for="ev-objective">What are we trying to create or improve?</label>
+   <textarea id="ev-objective" maxlength="2600" placeholder="Describe the vision, current state, biggest limitation, and what an extraordinary result would look like…"></textarea>
+   <div class="ev-small">Include real constraints: budget, tools, time, skills, and what already exists.</div>
+   <div style="height:14px"></div><label for="ev-direction">Evolution directive <span style="font-weight:400;color:#91a2bf">(optional)</span></label>
+   <input id="ev-direction" maxlength="500" placeholder="e.g. Make it feel like a next-generation AI operating system">
+   <button class="ev-primary" id="ev-run" type="button">✦ RUN EVOLUTION CYCLE</button>
+   <p class="ev-status" id="ev-status" role="status" aria-live="polite">Ready. One deliberate cycle can turn a broad vision into a concrete next build.</p>
+  </div>
+  <div class="ev-panel">
+   <div class="ev-kicker">THE FOUR-LENS ENGINE</div>
+   <div class="ev-stages">
+    <div class="ev-stage"><span class="ev-num">01 / STRATEGY</span><b>Find the breakthrough</b><span>Vision, user value, priorities</span></div>
+    <div class="ev-stage"><span class="ev-num">02 / ARCHITECTURE</span><b>Design the system</b><span>Modules, data, integrations</span></div>
+    <div class="ev-stage"><span class="ev-num">03 / RED TEAM</span><b>Challenge the design</b><span>Failure modes, abuse, safeguards</span></div>
+    <div class="ev-stage"><span class="ev-num">04 / EVOLUTION</span><b>Define the next version</b><span>Build order, tests, success metrics</span></div>
+   </div>
+   <div style="height:18px"></div><label for="ev-history">YOUR LOCAL EVOLUTION LOG</label>
+   <select id="ev-history" class="ev-history"><option value="">No saved cycles yet</option></select>
+   <div class="ev-tools" style="margin-top:10px"><button type="button" id="ev-load">Open selected</button><button type="button" id="ev-clear">Clear local log</button></div>
+   <p class="ev-small">Saved cycles stay in this browser on this device; they are not shared across devices or accounts.</p>
+  </div>
+ </div>
+ <div class="ev-output" id="ev-output" aria-live="polite">
+  <div class="ev-output-head"><h3>Evolution blueprint</h3><div class="ev-tools"><button type="button" id="ev-copy">Copy blueprint</button><button type="button" id="ev-download">Export .txt</button><button type="button" id="ev-next">Evolve this version ↗</button></div></div>
+  <pre id="ev-result"></pre>
+ </div>
+ <div class="ev-foot">KAF-AI uses the connected NEXUS AI service. The four lenses are structured reasoning stages in one model request—not four independent AI agents. Review outputs before implementation; no external changes are made automatically.</div>
+</section>
+<script>
+(() => {
+ const root=document.getElementById("nexus-evolution");if(!root||root.dataset.ready==="1")return;root.dataset.ready="1";
+ const $=id=>document.getElementById(id),API="https://nexus-kaf-ai.kumarchotu36553.workers.dev/api/chat",KEY="nexus_evolution_cycles_v1";
+ let cycles=[],current=null;try{const v=JSON.parse(localStorage.getItem(KEY)||"[]");if(Array.isArray(v))cycles=v.slice(0,20);}catch(_){}
+ const status=$("ev-status"),run=$("ev-run"),output=$("ev-output"),result=$("ev-result"),history=$("ev-history");
+ function persist(){try{localStorage.setItem(KEY,JSON.stringify(cycles.slice(0,20)));}catch(_){status.textContent="This browser could not save the local evolution log.";}}
+ function refresh(){history.replaceChildren();if(!cycles.length){const o=document.createElement("option");o.value="";o.textContent="No saved cycles yet";history.append(o);return;}cycles.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=(c.project||"Untitled project")+" · "+new Date(c.createdAt).toLocaleString();history.append(o);});}
+ function show(c){current=c;result.textContent=c.blueprint;output.style.display="block";output.scrollIntoView({behavior:"smooth",block:"nearest"});}
+ refresh();
+ run.addEventListener("click",async()=>{
+  const project=$("ev-project").value.trim()||"Untitled NEXUS project",objective=$("ev-objective").value.trim(),directive=$("ev-direction").value.trim();
+  if(objective.length<25){status.textContent="Vision ko thoda detail mein likho (minimum 25 characters).";$("ev-objective").focus();return;}
+  run.disabled=true;run.textContent="EVOLUTION CYCLE RUNNING…";status.textContent="KAF-AI is examining the vision through all four lenses…";output.style.display="none";
+  const previous=current?current.blueprint:"";
+  const prompt=[
+   "You are KAF-AI, the strategic intelligence core of NEXUS. Create a rigorous, ambitious but buildable evolution blueprint. Do not claim to have executed code, accessed accounts, or changed infrastructure.",
+   "PROJECT: "+project,"CURRENT VISION / STATE: "+objective,"EVOLUTION DIRECTIVE: "+(directive||"Find the highest-leverage next evolution."),
+   previous?"PREVIOUS BLUEPRINT TO EVOLVE (improve it; do not merely repeat it):\n"+previous.slice(0,9000):"",
+   "Think through these four lenses in sequence and expose the conclusions:",
+   "1. STRATEGY CORE — north-star vision, who benefits, breakthrough differentiator, 3 priorities.",
+   "2. SYSTEM ARCHITECT — proposed product architecture, named modules, user journey, data flow, free-first stack where feasible, what can be built in current repo.",
+   "3. RED TEAM — realistic failure modes, privacy/security risks, misuse cases, weak assumptions, mitigations. Do not provide exploit instructions.",
+   "4. EVOLUTION PLAN — Version 1/2/3 capability ladder, first 5 implementation tasks in exact order, acceptance tests, measurable success metrics, what NOT to build yet.",
+   "Finish with THE NEXT MOVE (one concrete action), and EVOLUTION SCORECARD (value, feasibility, differentiation, risk; each /10 with short reasons).",
+   "Be specific, candid, technically grounded, avoid generic startup language. Label assumptions and distinguish current capabilities from proposed features. Prefer practical free/open-source components; do not promise unimplemented autonomous agency."
+  ].filter(Boolean).join("\n\n");
+  try{
+   const response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({message:prompt})});
+   let data;try{data=await response.json();}catch(_){throw new Error("AI service returned an unreadable response.");}
+   if(!response.ok||!data.success||typeof data.reply!=="string")throw new Error(data.error||"Evolution cycle failed.");
+   const item={id:(crypto.randomUUID?crypto.randomUUID():"ev-"+Date.now()),project,objective,directive,blueprint:data.reply,createdAt:Date.now()};
+   cycles.unshift(item);cycles=cycles.slice(0,20);persist();refresh();history.value=item.id;show(item);status.textContent="Evolution blueprint generated and saved in this browser.";
+  }catch(e){status.textContent="Cycle failed: "+e.message;}
+  finally{run.disabled=false;run.textContent="✦ RUN EVOLUTION CYCLE";}
+ });
+ $("ev-load").addEventListener("click",()=>{const c=cycles.find(x=>x.id===history.value);if(!c){status.textContent="Select a saved cycle first.";return;}show(c);$("ev-project").value=c.project||"";$("ev-objective").value=c.objective||"";$("ev-direction").value=c.directive||"";status.textContent="Saved evolution cycle loaded.";});
+ $("ev-clear").addEventListener("click",()=>{if(!confirm("Delete all evolution cycles saved in this browser?"))return;cycles=[];current=null;persist();refresh();output.style.display="none";status.textContent="Local evolution log cleared.";});
+ $("ev-copy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(result.textContent);status.textContent="Blueprint copied.";}catch(_){status.textContent="Copy unavailable; select the blueprint text manually.";}});
+ $("ev-download").addEventListener("click",()=>{if(!current)return;const blob=new Blob([current.blueprint],{type:"text/plain;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=(current.project||"nexus-evolution").replace(/[^a-z0-9-_]+/gi,"-").toLowerCase()+"-blueprint.txt";a.click();URL.revokeObjectURL(url);});
+ $("ev-next").addEventListener("click",()=>{if(!current)return;$("ev-direction").value="Evolve the previous blueprint into a more capable, differentiated next version. Keep what works; fix weak points and propose concrete repo-level implementation steps.";status.textContent="Previous blueprint will be included in the next evolution cycle.";$("ev-direction").focus();});
+})();
+</script>
+
   <!-- NEXUS ADMIN ACCESS -->
 <style>
 #nexusAdminLauncher{position:fixed;right:16px;bottom:16px;z-index:9000}
