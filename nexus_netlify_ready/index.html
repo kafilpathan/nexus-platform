@@ -1510,7 +1510,7 @@ status.setAttribute("aria-label", "Problem status");
    memoryBadge.style.display = "block";
    memoryBadge.style.marginTop = "8px";
    memoryBadge.style.opacity = "0.72";
-   memoryBadge.textContent = "Memory: " + memory.status + " · " + (Number(memory.count) || 0) + " match(es)";
+   memoryBadge.textContent = "Memory: " + memory.status + " · " + (Number(memory.count) || 0) + " match(es)" + (memory.stage && memory.stage !== "none" ? " · " + memory.stage : "") + (Number.isInteger(Number(memory.httpStatus)) && memory.httpStatus !== null ? " · HTTP " + memory.httpStatus : "");
    bubble.appendChild(memoryBadge);
   }
   messagesEl.appendChild(bubble);
