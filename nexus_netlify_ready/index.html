@@ -1593,7 +1593,7 @@ status.setAttribute("aria-label", "Problem status");
    const response = await fetch(API_URL, {
     method: "POST",
     headers: requestHeaders,
-    body: JSON.stringify({ message, messages: context, useMemory: Boolean(accessToken) })
+    body: JSON.stringify({ message, messages: context, useMemory: Boolean(document.getElementById("kafai-use-memory")?.checked) })
    });
    let data;
    try { data = await response.json(); }
