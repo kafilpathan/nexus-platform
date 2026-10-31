@@ -1012,7 +1012,14 @@ document.getElementById('copySubmission').addEventListener('click', async functi
   return true;
  }
  refresh();
+ // The Evolution panel can load before the user signs in. Retry cloud history
+ // immediately after a successful sign-in, without blocking Supabase's auth callback.
  loadCloudCycles();
+ db.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_IN" && session?.user){
+   Promise.resolve().then(()=>loadCloudCycles());
+  }
+ });
  run.addEventListener("click",async()=>{
   const project=$("ev-project").value.trim()||"Untitled NEXUS project",objective=$("ev-objective").value.trim(),directive=$("ev-direction").value.trim();
   if(objective.length<25){status.textContent="Vision ko thoda detail mein likho (minimum 25 characters).";$("ev-objective").focus();return;}
