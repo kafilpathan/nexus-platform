@@ -42,13 +42,21 @@ scripts.forEach((source, index) => checkSyntax(source, `frontend-${index}.js`));
 const required = [
   ["chat delete control", html.includes('id="kafai-delete"')],
   ["memory consent explanation", html.includes("admin account required")],
-  ["memory opt-in is off by default", (() => { const match = html.match(/<input\\b[^>]*id="kafai-use-memory"[^>]*>/); return !!match && !/\\bchecked(?:\\s|=|>)/i.test(match[0]); })()],
+  ["memory opt-in is off by default", (() => { const match = html.match(/<input\b[^>]*id="kafai-use-memory"[^>]*>/); return !!match && !/\bchecked(?:\\s|=|>)/i.test(match[0]); })()],
   ["visible auto-save status", html.includes("Project memory saved")],
   ["narrow project memory signal", html.includes("projectSignal = /") && html.includes("memory core|cloudflare worker|supabase)")],
   ["rate-limit 429 response", worker.includes("}, 429)")],
   ["rate-limit failure 503 response", worker.includes("}, 503)")],
   ["rate-limit binding capability check", worker.includes('typeof env.PROBLEM_RATE_LIMIT.limit === "function"')]
 ];
+const evolutionTest = spawnSync(process.execPath, [path.join(root, "scripts/test-evolution.mjs")], { encoding: "utf8" });
+if (evolutionTest.status !== 0) {
+  process.stderr.write(evolutionTest.stderr || evolutionTest.stdout || "Evolution Engine tests failed\\n");
+  process.exitCode = 1;
+} else {
+  process.stdout.write(evolutionTest.stdout);
+}
+
 for (const [label, ok] of required) {
   console.log((ok ? "PASS " : "FAIL ") + label);
   if (!ok) process.exitCode = 1;
