@@ -13,6 +13,8 @@ create table if not exists public.nexus_experiments (
   status text not null default 'proposed'
     check (status in ('proposed', 'eligible_for_review', 'approved', 'rejected')),
   notes text not null default '' check (char_length(notes) <= 3000),
+  reviewed_by uuid references auth.users(id) on delete set null,
+  reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
