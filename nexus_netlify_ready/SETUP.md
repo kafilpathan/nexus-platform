@@ -1,3 +1,5 @@
+> **Legacy deployment package:** this folder contains the older Netlify Functions setup. The current NEXUS backend is the Cloudflare Worker in `cloudflare/worker.js`. Do not follow these Netlify deployment steps for the active Cloudflare deployment. See the repository root README and `cloudflare/README.md` for the current architecture.
+
 # NEXUS — Netlify-ready package
 
 This project is structured for a Netlify site with Netlify Functions. It includes the NEXUS website (MindMesh, Impossible Button, Solution Evolution, Global Problem Map), one API function, URL rewrites, and the Supabase schema.
