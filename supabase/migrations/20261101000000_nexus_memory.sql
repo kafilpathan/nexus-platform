@@ -4,7 +4,8 @@ create table if not exists public.nexus_memory (
   owner_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
   memory_key text not null check (char_length(memory_key) between 2 and 100),
   memory_value text not null check (char_length(memory_value) between 1 and 4000),
-  category text not null default 'project' check (category in ('project','decision','preference','milestone','lesson')),
+  category text not null default 'project'
+    check (category in ('project','decision','preference','milestone','lesson','conversation')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique(owner_id, memory_key)
