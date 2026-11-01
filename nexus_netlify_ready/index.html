@@ -1524,12 +1524,13 @@ status.setAttribute("aria-label", "Problem status");
 <div id="kafai-tools" class="kafai-toolbar">
 <select id="kafai-history" aria-label="Saved conversations"></select>
 <button type="button" id="kafai-new">＋ New</button>
+<button type="button" id="kafai-delete" aria-label="Delete selected conversation">Delete</button>
 </div>
 <div id="kafai-messages" aria-live="polite"></div>
 <div id="kafai-note">Chats are saved only in this browser on this device.</div>
-<label id="kafai-memory-toggle" style="display:flex;align-items:center;gap:7px;padding:0 12px 8px;color:#b8c6dc;font-size:11px">
+<label id="kafai-memory-toggle" style="display:flex;align-items:flex-start;gap:7px;padding:0 12px 8px;color:#b8c6dc;font-size:11px">
  <input type="checkbox" id="kafai-use-memory" checked>
- Use my saved NEXUS memories when signed in
+ <span>Use saved NEXUS memories in chat and allow project-related chat auto-save (admin account required). You can review or delete saved items in Memory Core.</span>
 </label>
 <form id="kafai-form">
 <input id="kafai-input" placeholder="Message KAF-AI..." maxlength="4000" autocomplete="off" required>
@@ -1612,7 +1613,10 @@ status.setAttribute("aria-label", "Problem status");
    const stage = typeof memory.stage === "string" && memory.stage !== "none" ? " · " + memory.stage : "";
    const httpStatus = Number.isInteger(Number(memory.httpStatus)) && Number(memory.httpStatus) > 0
     ? " · HTTP " + Number(memory.httpStatus) : "";
-   memoryBadge.textContent = "Memory: " + memory.status + stage + httpStatus + " · " + (Number(memory.count) || 0) + " match(es)";
+   const saveStatus = memory.saveStatus === "saved" ? " · Project memory saved" :
+    memory.saveStatus === "skipped" ? " · Project memory not applicable / disabled" :
+    memory.saveStatus === "unavailable" ? " · Project memory save unavailable" : "";
+   memoryBadge.textContent = "Memory: " + memory.status + stage + httpStatus + " · " + (Number(memory.count) || 0) + " match(es)" + saveStatus;
    bubble.appendChild(memoryBadge);
   }
   messagesEl.appendChild(bubble);
@@ -1622,7 +1626,7 @@ status.setAttribute("aria-label", "Problem status");
 
  async function saveExchange(chat, userText, assistantText, assistantItem) {
   const sourceText = String(userText || "").trim();
-  const projectSignal = /\b(nexus|kaf[\s-]?ai|memory core|cloudflare worker|supabase|project)\b/i;
+  const projectSignal = /\b(nexus|kaf[\s-]?ai|memory core|cloudflare worker|supabase)\b/i;
   const sensitiveSignal = /\b(password|passcode|otp|one[- ]time code|secret|api[- ]?key|access token|refresh token|bank account|account number|card number|cvv|aadhaar|pan number|home address|phone number|medical report|diagnosis)\b/i;
   if (!projectSignal.test(sourceText) || sensitiveSignal.test(sourceText)) return false;
   const db = window.nexusSupabaseClient;
@@ -1689,6 +1693,21 @@ status.setAttribute("aria-label", "Problem status");
  document.getElementById("kafai-hero-open")?.addEventListener("click", openKafAI);
  document.getElementById("kafai-close").onclick = () => panel.classList.remove("open");
  document.getElementById("kafai-new").onclick = createChat;
+ document.getElementById("kafai-delete").onclick = () => {
+  const chat = activeChat();
+  if (!chat) return;
+  if (!window.confirm("Delete this conversation from this device? This cannot be undone.")) return;
+  chats = chats.filter(item => item.id !== chat.id);
+  activeId = "";
+  persist();
+  if (chats.length) {
+   activeId = [...chats].sort((a,b) => b.updatedAt - a.updatedAt)[0].id;
+   persist();
+   render();
+  } else {
+   createChat();
+  }
+ };
  historySelect.onchange = () => {
   activeId = historySelect.value;
   persist();
