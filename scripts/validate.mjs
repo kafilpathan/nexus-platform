@@ -21,6 +21,20 @@ function checkSyntax(source, filename) {
 
 checkSyntax(worker, "worker.mjs");
 
+const modulePaths = [
+  "nexus_netlify_ready/evolution-dashboard.js",
+  "nexus_netlify_ready/evolution/engine.mjs",
+  "nexus_netlify_ready/evolution/assessor.mjs",
+  "nexus_netlify_ready/evolution/knowledge-graph.mjs",
+  "nexus_netlify_ready/evolution/hybrid-reasoner.mjs",
+  "nexus_netlify_ready/evolution/generative-proposals.mjs",
+  "nexus_netlify_ready/evolution/supabase-store.mjs"
+];
+for (const relativePath of modulePaths) {
+  const source = fs.readFileSync(path.join(root, relativePath), "utf8");
+  checkSyntax(source, path.basename(relativePath));
+}
+
 const scripts = [];
 let cursor = 0;
 while (true) {
@@ -48,6 +62,15 @@ const required = [
   ["rate-limit 429 response", worker.includes("}, 429)")],
   ["rate-limit failure 503 response", worker.includes("}, 503)")],
   ["rate-limit binding capability check", worker.includes('typeof env.PROBLEM_RATE_LIMIT.limit === "function"')]
+  ["Evolution dashboard is loaded", html.includes('src="./evolution-dashboard.js"')],
+  ["evolution schema has RLS on all new tables", (() => {
+    const migration = fs.readFileSync(path.join(root, "supabase/migrations/20261102000100_nexus_evolution_engine.sql"), "utf8");
+    return ["nexus_experiments","nexus_knowledge_nodes","nexus_knowledge_edges","nexus_evaluations"].every(name =>
+      migration.includes("create table if not exists public." + name) &&
+      migration.includes("alter table public." + name + " enable row level security"));
+  })()],
+  ["evolution schema grants no anonymous access", !fs.readFileSync(path.join(root, "supabase/migrations/20261102000100_nexus_evolution_engine.sql"), "utf8").match(/grant[^;]+to anon/i)],
+  ["VAE experiment uses synthetic data", fs.readFileSync(path.join(root, "research/vae_toy.py"), "utf8").includes("make_synthetic_data")],
 ];
 const evolutionTest = spawnSync(process.execPath, [path.join(root, "scripts/test-evolution.mjs")], { encoding: "utf8" });
 if (evolutionTest.status !== 0) {
