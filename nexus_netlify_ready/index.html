@@ -1622,8 +1622,8 @@ status.setAttribute("aria-label", "Problem status");
 
  async function saveExchange(chat, userText, assistantText, assistantItem) {
   const sourceText = String(userText || "").trim();
-  const projectSignal = /\\b(nexus|kaf[\\s-]?ai|memory core|cloudflare worker|supabase|project)\\b/i;
-  const sensitiveSignal = /\\b(password|passcode|otp|one[- ]time code|secret|api[- ]?key|access token|refresh token|bank account|account number|card number|cvv|aadhaar|pan number|home address|phone number|medical report|diagnosis)\\b/i;
+  const projectSignal = /\b(nexus|kaf[\s-]?ai|memory core|cloudflare worker|supabase|project)\b/i;
+  const sensitiveSignal = /\b(password|passcode|otp|one[- ]time code|secret|api[- ]?key|access token|refresh token|bank account|account number|card number|cvv|aadhaar|pan number|home address|phone number|medical report|diagnosis)\b/i;
   if (!projectSignal.test(sourceText) || sensitiveSignal.test(sourceText)) return false;
   const db = window.nexusSupabaseClient;
   if (!db) throw new Error("Supabase client is unavailable. Sign in through Admin Login first.");
