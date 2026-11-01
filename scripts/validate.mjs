@@ -14,25 +14,36 @@ function checkSyntax(source, filename) {
   const result = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
   fs.rmSync(dir, { recursive: true, force: true });
   if (result.status !== 0) {
-    process.stderr.write(result.stderr || result.stdout || "Syntax check failed\\n");
+    process.stderr.write(result.stderr || result.stdout || "Syntax check failed\n");
     process.exitCode = 1;
   }
 }
 
 checkSyntax(worker, "worker.mjs");
 
-const scripts = [...html.matchAll(/<script(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+const scripts = [];
+let cursor = 0;
+while (true) {
+  const start = html.indexOf("<script", cursor);
+  if (start < 0) break;
+  const tagEnd = html.indexOf(">", start);
+  const end = html.indexOf("</script>", tagEnd);
+  if (tagEnd < 0 || end < 0) throw new Error("Malformed script element in frontend HTML.");
+  const openingTag = html.slice(start, tagEnd);
+  if (!openingTag.includes("src=")) scripts.push(html.slice(tagEnd + 1, end));
+  cursor = end + "</script>".length;
+}
 if (!scripts.length) {
   console.error("No inline frontend scripts found.");
   process.exit(1);
 }
-scripts.forEach((match, index) => checkSyntax(match[1], `frontend-${index}.js`));
+scripts.forEach((source, index) => checkSyntax(source, `frontend-${index}.js`));
 
 const required = [
   ["chat delete control", html.includes('id="kafai-delete"')],
   ["memory consent explanation", html.includes("admin account required")],
   ["visible auto-save status", html.includes("Project memory saved")],
-  ["narrow project memory signal", html.includes("projectSignal = /\\\\b(nexus|kaf")],
+  ["narrow project memory signal", html.includes("projectSignal = /") && html.includes("memory core|cloudflare worker|supabase)")],
   ["rate-limit 429 response", worker.includes("}, 429)")],
   ["rate-limit failure 503 response", worker.includes("}, 503)")],
   ["rate-limit binding capability check", worker.includes('typeof env.PROBLEM_RATE_LIMIT.limit === "function"')]
