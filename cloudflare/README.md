@@ -59,7 +59,9 @@ configuration used to deploy it):
   this is a public anonymous endpoint.
 
 The built-in Cloudflare limiter is approximate and counters are local to
-Cloudflare locations; it is not a strict global quota. IP-based limits can also
+Cloudflare locations; it is not a strict global quota. If the binding exists but
+its `limit()` call fails, the Worker returns HTTP 503 (fail closed) rather than
+silently accepting an unprotected submission. IP-based limits can also
 affect multiple people sharing a network. Review the current Cloudflare
 Rate Limiting documentation before deployment:
 https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
