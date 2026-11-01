@@ -1,3 +1,24 @@
+const readJsonBody = async (request, maxBytes) => {
+  const declaredLength = Number(request.headers.get("Content-Length") || 0);
+  if (declaredLength > maxBytes) {
+    throw Object.assign(new Error("Request body is too large."), { statusCode: 413 });
+  }
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).length > maxBytes) {
+    throw Object.assign(new Error("Request body is too large."), { statusCode: 413 });
+  }
+  let body;
+  try {
+    body = JSON.parse(raw);
+  } catch (_) {
+    throw Object.assign(new Error("Invalid JSON request body."), { statusCode: 400 });
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw Object.assign(new Error("Request body must be a JSON object."), { statusCode: 400 });
+  }
+  return body;
+};
+
 export default {
  async fetch(request, env) {
   const corsHeaders = {
@@ -26,8 +47,14 @@ export default {
    if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
    if (!env.AI) return json({ success: false, error: "Cloudflare AI binding missing" }, 500);
 
+   let body;
    try {
-    const body = await request.json();
+    body = await readJsonBody(request, 64000);
+   } catch (error) {
+    return json({ success: false, error: error.message }, error.statusCode || 400);
+   }
+
+   try {
     const message = body.message;
     if (typeof message !== "string" || !message.trim() || message.length > 4000) {
      return json({ error: "Invalid message" }, 400);
@@ -172,7 +199,8 @@ export default {
    }
    if (request.method === "POST") {
     let body;
-    try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+    try { body = await readJsonBody(request, 8000); }
+    catch (error) { return json({ error: error.message }, error.statusCode || 400); }
     const { title, category, details } = body;
     if (typeof title !== "string" || title.trim().length < 3 || title.trim().length > 120 ||
      typeof details !== "string" || details.trim().length < 10 || details.trim().length > 3000) {
