@@ -94,3 +94,26 @@ export async function saveEvaluation(client, evaluation) {
   if (error) throw error;
   return data;
 }
+
+/** Mark an experiment as eligible for review after a passing evaluation. */
+export async function markExperimentEligible(client, experimentId, candidateScore) {
+  await requireNexusAdmin(client);
+  if (typeof experimentId !== "string" || !experimentId) throw new TypeError("experimentId is required.");
+  if (!Number.isFinite(candidateScore)) throw new TypeError("candidateScore must be finite.");
+  const { data, error } = await client.from("nexus_experiments")
+    .update({ status: "eligible_for_review", candidate_score: candidateScore })
+    .eq("id", experimentId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/** Human admin decision only. Approval means staged-test eligibility, not deployment. */
+export async function reviewExperiment(client, experimentId, decision) {
+  const user = await requireNexusAdmin(client);
+  if (!["approved", "rejected"].includes(decision)) throw new TypeError("decision must be approved or rejected.");
+  const { data, error } = await client.from("nexus_experiments")
+    .update({ status: decision, reviewed_by: user.id, reviewed_at: new Date().toISOString() })
+    .eq("id", experimentId).eq("status", "eligible_for_review").select().single();
+  if (error) throw error;
+  return data;
+}
