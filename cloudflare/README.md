@@ -39,3 +39,34 @@ Supported memory categories are `project`, `decision`, `preference`, `milestone`
 Database changes are versioned under `supabase/migrations/`. Apply each pending migration to the intended Supabase project before deploying frontend code that depends on it. Never paste service-role keys into GitHub or chat.
 
 No Cloudflare deployment is performed by a repository change alone.
+
+
+## Public problem submission rate limiting
+
+The Worker supports an optional Cloudflare Rate Limiting binding named
+`PROBLEM_RATE_LIMIT`. When configured, it checks anonymous problem submissions
+before writing to Supabase and returns HTTP 429 when the configured threshold is
+exceeded.
+
+Configure the binding on the `nexus-kaf-ai` Worker (or in the Wrangler
+configuration used to deploy it):
+
+- Binding name: `PROBLEM_RATE_LIMIT`
+- Unique namespace ID: choose a positive integer that is not already used by
+  another rate-limit namespace in this Cloudflare account.
+- Suggested initial threshold: 5 requests per 60 seconds.
+- Use the key provided by the Worker, which is based on the request IP because
+  this is a public anonymous endpoint.
+
+The built-in Cloudflare limiter is approximate and counters are local to
+Cloudflare locations; it is not a strict global quota. If the binding exists but
+its `limit()` call fails, the Worker returns HTTP 503 (fail closed) rather than
+silently accepting an unprotected submission. IP-based limits can also
+affect multiple people sharing a network. Review the current Cloudflare
+Rate Limiting documentation before deployment:
+https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
+
+The Worker root status response reports `problemRateLimit` as
+`configured` or `not_configured`. A missing binding does not block existing
+submissions, so the route remains backward-compatible; do not promote public
+submissions widely until the binding is configured and a 429 test has passed.
