@@ -39,7 +39,8 @@ export default {
     status: "online",
     database: env.SUPABASE_URL ? "configured" : "missing",
     ai: env.AI ? "Cloudflare Workers AI connected" : "missing",
-    memory: "optional authenticated per-user retrieval"
+    memory: "optional authenticated per-user retrieval",
+    problemRateLimit: env.PROBLEM_RATE_LIMIT ? "configured" : "not_configured"
    });
   }
 
@@ -198,6 +199,20 @@ export default {
      response.ok ? 200 : response.status);
    }
    if (request.method === "POST") {
+    // Optional Cloudflare Rate Limiting binding. Configure PROBLEM_RATE_LIMIT
+    // before public promotion; IP is the only stable anonymous key available here.
+    // Cloudflare's built-in limiter is approximate and location-scoped.
+    if (env.PROBLEM_RATE_LIMIT && typeof env.PROBLEM_RATE_LIMIT.limit === "function") {
+     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+     try {
+      const decision = await env.PROBLEM_RATE_LIMIT.limit({ key: "public-problem:" + ip });
+      if (!decision.success) {
+       return json({ success: false, error: "Too many submissions. Please wait before trying again." }, 429);
+      }
+     } catch (_) {
+      // Keep the submission route available if the optional limiter has a transient error.
+     }
+    }
     let body;
     try { body = await readJsonBody(request, 8000); }
     catch (error) { return json({ error: error.message }, error.statusCode || 400); }
