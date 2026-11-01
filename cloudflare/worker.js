@@ -40,7 +40,7 @@ export default {
     database: env.SUPABASE_URL ? "configured" : "missing",
     ai: env.AI ? "Cloudflare Workers AI connected" : "missing",
     memory: "optional authenticated per-user retrieval",
-    problemRateLimit: env.PROBLEM_RATE_LIMIT ? "configured" : "not_configured"
+    problemRateLimit: env.PROBLEM_RATE_LIMIT && typeof env.PROBLEM_RATE_LIMIT.limit === "function" ? "configured" : "not_configured"
    });
   }
 
@@ -210,7 +210,8 @@ export default {
        return json({ success: false, error: "Too many submissions. Please wait before trying again." }, 429);
       }
      } catch (_) {
-      // Keep the submission route available if the optional limiter has a transient error.
+      // Fail closed when a configured limiter errors; otherwise abuse protection is bypassed.
+      return json({ success: false, error: "Submission protection is temporarily unavailable. Please try again later." }, 503);
      }
     }
     let body;
