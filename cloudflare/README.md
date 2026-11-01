@@ -22,6 +22,12 @@ It fetches at most 30 of the signed-in user's rows, ranks them by keyword overla
 
 Supported memory categories are `project`, `decision`, `preference`, `milestone`, `lesson`, and `conversation`. The `conversation` category is required by the chat's **Save exchange to Memory** action.
 
+## API input validation
+
+- Chat JSON bodies are capped at 64 KB; community-problem JSON bodies are capped at 8 KB.
+- Malformed JSON, null values, arrays, and oversized payloads receive client errors (400/413), not generic server errors.
+- Chat messages remain limited to 4,000 characters and problem fields retain their database-aligned limits.
+
 ## Deploy and verify
 
 1. In Cloudflare Dashboard, open Workers & Pages > `nexus-kaf-ai` > Settings > Variables and Secrets.
