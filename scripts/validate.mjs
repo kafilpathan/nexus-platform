@@ -32,7 +32,7 @@ const modulePaths = [
 ];
 for (const relativePath of modulePaths) {
   const source = fs.readFileSync(path.join(root, relativePath), "utf8");
-  checkSyntax(source, path.basename(relativePath));
+  checkSyntax(source, path.basename(relativePath).replace(/\.js$/, ".mjs"));
 }
 
 const scripts = [];
@@ -61,7 +61,7 @@ const required = [
   ["narrow project memory signal", html.includes("projectSignal = /") && html.includes("memory core|cloudflare worker|supabase)")],
   ["rate-limit 429 response", worker.includes("}, 429)")],
   ["rate-limit failure 503 response", worker.includes("}, 503)")],
-  ["rate-limit binding capability check", worker.includes('typeof env.PROBLEM_RATE_LIMIT.limit === "function"')]
+  ["rate-limit binding capability check", worker.includes('typeof env.PROBLEM_RATE_LIMIT.limit === "function"')],
   ["Evolution dashboard is loaded", html.includes('src="./evolution-dashboard.js"')],
   ["evolution schema has RLS on all new tables", (() => {
     const migration = fs.readFileSync(path.join(root, "supabase/migrations/20261102000100_nexus_evolution_engine.sql"), "utf8");
