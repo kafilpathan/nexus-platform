@@ -61,5 +61,6 @@ Before a production deployment, verify:
 - Save Exchange succeeds with the `conversation` category.
 - Memory refresh and delete work for the admin owner.
 - Non-admin accounts cannot access admin-only records/actions.
-- Public problem GET/POST works with valid payloads and rejects invalid payloads.
+- Public problem GET/POST works with valid payloads and rejects malformed JSON, null/array bodies, oversized bodies, and invalid field lengths.
+- Chat rejects malformed JSON and oversized payloads with 4xx responses; valid messages still return a non-empty response.
 - No service-role key is present in frontend files, build artifacts, logs, or browser responses.
