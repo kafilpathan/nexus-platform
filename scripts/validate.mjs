@@ -42,6 +42,7 @@ scripts.forEach((source, index) => checkSyntax(source, `frontend-${index}.js`));
 const required = [
   ["chat delete control", html.includes('id="kafai-delete"')],
   ["memory consent explanation", html.includes("admin account required")],
+  ["memory opt-in is off by default", (() => { const match = html.match(/<input\\b[^>]*id="kafai-use-memory"[^>]*>/); return !!match && !/\\bchecked(?:\\s|=|>)/i.test(match[0]); })()],
   ["visible auto-save status", html.includes("Project memory saved")],
   ["narrow project memory signal", html.includes("projectSignal = /") && html.includes("memory core|cloudflare worker|supabase)")],
   ["rate-limit 429 response", worker.includes("}, 429)")],
