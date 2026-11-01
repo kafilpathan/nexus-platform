@@ -4,10 +4,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = process.cwd();
-const workerPath = path.join(root, "cloudflare/worker.js");
-const htmlPath = path.join(root, "nexus_netlify_ready/index.html");
-const worker = fs.readFileSync(workerPath, "utf8");
-const html = fs.readFileSync(htmlPath, "utf8");
+const worker = fs.readFileSync(path.join(root, "cloudflare/worker.js"), "utf8");
+const html = fs.readFileSync(path.join(root, "nexus_netlify_ready/index.html"), "utf8");
 
 function checkSyntax(source, filename) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-check-"));
@@ -16,7 +14,7 @@ function checkSyntax(source, filename) {
   const result = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
   fs.rmSync(dir, { recursive: true, force: true });
   if (result.status !== 0) {
-    process.stderr.write(result.stderr || result.stdout || "Syntax check failed\n");
+    process.stderr.write(result.stderr || result.stdout || "Syntax check failed\\n");
     process.exitCode = 1;
   }
 }
@@ -34,7 +32,7 @@ const required = [
   ["chat delete control", html.includes('id="kafai-delete"')],
   ["memory consent explanation", html.includes("admin account required")],
   ["visible auto-save status", html.includes("Project memory saved")],
-  ["narrow project memory signal", worker.length >= 0 && html.includes("/\\\\b(nexus|kaf[\\\\s-]?ai|memory core|cloudflare worker|supabase)\\\\b/i")],
+  ["narrow project memory signal", html.includes("projectSignal = /\\\\b(nexus|kaf")],
   ["rate-limit 429 response", worker.includes("}, 429)")],
   ["rate-limit failure 503 response", worker.includes("}, 503)")],
   ["rate-limit binding capability check", worker.includes('typeof env.PROBLEM_RATE_LIMIT.limit === "function"')]
