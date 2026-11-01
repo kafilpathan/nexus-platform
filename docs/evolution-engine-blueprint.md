@@ -79,13 +79,16 @@ A candidate is eligible for review only if it:
 
 - [x] Make Memory Core retrieval/auto-save an explicit opt-in by default.
 - [x] Add the isolated genetic-search prototype and deterministic tests.
-- [ ] Add CI execution of the Evolution Engine tests.
-- [ ] Add a read-only experiment dashboard and baseline metrics.
-- [ ] Review Supabase RLS and design an experiment ledger migration (do not apply automatically).
-- [ ] Add reviewed knowledge nodes/edges with provenance.
-- [ ] Add hybrid rules with adversarial and regression tests.
-- [ ] Research small generative-model experiments separately from production inference.
-- [ ] Define staged release, monitoring, and rollback before any continuous-learning deployment.
+- [x] Add CI execution of optimizer, assessor, graph, hybrid-rule, and proposal-adapter tests.
+- [x] Add an admin-only Evolution Engine workspace with proposal generation, genetic search, self-assessment, experiment review, and knowledge graph controls.
+- [x] Design an admin-only Supabase experiment/knowledge/evaluation schema with RLS and explicit authenticated grants; migration file is committed but not applied.
+- [x] Add provenance-aware knowledge nodes/edges and bounded graph traversal.
+- [x] Add hybrid rules that block privileged actions and keep model output untrusted.
+- [x] Add an isolated local PyTorch VAE research script using synthetic data only.
+- [x] Define gated experiment review and CI as the continuous-improvement loop; no unattended production release.
+- [ ] Apply the migration only after explicit approval, then test admin and non-admin access.
+- [ ] Run browser integration tests, measured load tests, and the optional local VAE training experiment.
+- [ ] Define production monitoring and rollback before any staged release.
 
 ## Security and deployment boundary
 
