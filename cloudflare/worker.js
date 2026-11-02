@@ -40,17 +40,21 @@ const weatherCodeLabel = (code) => ({
 const getRealWorldContext = async (message) => {
   const context = [];
   const sources = [];
-  const weatherIntent = /\b(weather|forecast|temperature|mausam|mosam|baarish|barish)\b/i.test(message);
+  const cleanQuery = (value) => value
+    .replace(/\\b(today|tomorrow|now|please|right now|latest|recent|news|about|for me|search|the web|internet|online|research|wikipedia|scientific|science|papers?|studies)\\b/gi, " ")
+    .replace(/\\s+/g, " ").trim();
+
+  const weatherIntent = /\\b(weather|forecast|temperature|mausam|mosam|baarish|barish)\\b/i.test(message);
   if (weatherIntent) {
     let place = "";
     const patterns = [
-      /(?:weather|forecast|temperature|mausam|mosam)\s+(?:in|at|for|of)?\s*([a-z][a-z .'-]{1,60})/i,
-      /([a-z][a-z .'-]{1,60})\s+(?:ka|ki|mein)\s+(?:weather|mausam|mosam)/i,
-      /(?:in|at|for)\s+([a-z][a-z .'-]{1,60})/i
+      /(?:weather|forecast|temperature|mausam|mosam)\\s+(?:in|at|for|of)?\\s*([a-z][a-z .'-]{1,60})/i,
+      /([a-z][a-z .'-]{1,60})\\s+(?:ka|ki|mein)\\s+(?:weather|mausam|mosam)/i,
+      /(?:in|at|for)\\s+([a-z][a-z .'-]{1,60})/i
     ];
     for (const pattern of patterns) {
       const match = message.match(pattern);
-      if (match) { place = match[1].replace(/\b(today|tomorrow|now|please|right now)\b/gi, "").trim(); break; }
+      if (match) { place = cleanQuery(match[1]); break; }
     }
     if (place) {
       try {
@@ -72,7 +76,7 @@ const getRealWorldContext = async (message) => {
             "%; wind " + current.wind_speed_10m + " km/h; today's high " +
             (daily.temperature_2m_max?.[0] ?? "n/a") + "°C, low " +
             (daily.temperature_2m_min?.[0] ?? "n/a") + "°C; rain probability " +
-            (daily.precipitation_probability_max?.[0] ?? "n/a") + "%. Units and observation time are supplied by the API.");
+            (daily.precipitation_probability_max?.[0] ?? "n/a") + "%. Do not describe this as a forecast beyond the returned period.");
           sources.push({ title: "Open-Meteo weather", url: "https://open-meteo.com/" });
         } else {
           context.push("Weather lookup could not identify the requested location: " + place + ".");
@@ -85,11 +89,65 @@ const getRealWorldContext = async (message) => {
     }
   }
 
-  const explicitResearch = /\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia)\b/i.test(message);
+  const newsIntent = /\\b(latest news|recent news|news about|news on|breaking news|headlines|samachar|taaza khabar|taaja khabar)\\b/i.test(message);
+  if (newsIntent) {
+    const query = cleanQuery(message);
+    if (query) {
+      try {
+        const params = new URLSearchParams({
+          query: query + " sourcelang:english",
+          mode: "ArtList", format: "json", maxrecords: "5", sort: "DateDesc"
+        });
+        const data = await fetchPublicJson("https://api.gdeltproject.org/api/v2/doc/doc?" + params.toString());
+        const articles = (data.articles || []).slice(0, 5);
+        if (articles.length) {
+          context.push("RECENT NEWS RESULTS (GDELT; article metadata from external publishers; verify dates and publisher claims):\\n" +
+            articles.map((item, index) => (index + 1) + ". " + (item.title || "Untitled") +
+              " | publisher: " + (item.domain || "unknown") +
+              " | published: " + (item.seendate || "date unavailable") +
+              " | URL: " + (item.url || "unavailable")).join("\\n"));
+          articles.forEach(item => { if (item.url) sources.push({ title: item.title || item.domain || "News article", url: item.url }); });
+        } else {
+          context.push("GDELT returned no matching recent news articles. Do not invent headlines.");
+        }
+      } catch (_) {
+        context.push("The free news search provider is temporarily unavailable. Do not invent current headlines.");
+      }
+    }
+  }
+
+  const scienceIntent = /\\b(scientific papers?|research papers?|science research|studies on|academic papers?)\\b/i.test(message);
+  if (scienceIntent) {
+    const query = cleanQuery(message);
+    if (query) {
+      try {
+        const params = new URLSearchParams({
+          "query.bibliographic": query, rows: "4",
+          select: "title,author,published,URL,container-title"
+        });
+        const data = await fetchPublicJson("https://api.crossref.org/works?" + params.toString());
+        const works = (data.message?.items || []).slice(0, 4);
+        if (works.length) {
+          context.push("SCIENTIFIC / ACADEMIC PUBLICATIONS (Crossref metadata; this is not a full-text search):\\n" +
+            works.map((work, index) => (index + 1) + ". " + ((work.title || ["Untitled"])[0]) +
+              " | journal: " + ((work["container-title"] || ["unknown"])[0]) +
+              " | published: " + (work.published?.["date-parts"]?.[0]?.join("-") || "unknown") +
+              " | DOI/article URL: " + (work.URL || "unavailable")).join("\\n"));
+          works.forEach(work => { if (work.URL) sources.push({ title: (work.title || ["Research paper"])[0], url: work.URL }); });
+        } else {
+          context.push("Crossref returned no matching publications. Do not invent paper titles or findings.");
+        }
+      } catch (_) {
+        context.push("The free scholarly metadata provider is temporarily unavailable. Do not invent research papers.");
+      }
+    }
+  }
+
+  const explicitResearch = /\\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|education|history of|what is the geography of|where is)\\b/i.test(message);
   if (explicitResearch) {
     const query = message
-      .replace(/\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|please|about)\b/gi, " ")
-      .replace(/\s+/g, " ").trim();
+      .replace(/\\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|please|about)\\b/gi, " ")
+      .replace(/\\s+/g, " ").trim();
     if (query) {
       try {
         const search = await fetchPublicJson("https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=" +
@@ -104,18 +162,18 @@ const getRealWorldContext = async (message) => {
           }
         }));
         if (pages.length) {
-          context.push("EXTERNAL RESEARCH RESULTS (Wikipedia; reference material, may be incomplete or outdated):\n" +
-            pages.map((page, index) => (index + 1) + ". " + page.title + ": " + page.extract.slice(0, 1200) + "\nSource: " + page.url).join("\n"));
+          context.push("REFERENCE / EDUCATION / GEOGRAPHY RESULTS (Wikipedia; may be incomplete or outdated):\\n" +
+            pages.map((page, index) => (index + 1) + ". " + page.title + ": " + page.extract.slice(0, 1200) + "\\nSource: " + page.url).join("\\n"));
           pages.forEach(page => sources.push({ title: page.title, url: page.url }));
         } else {
           context.push("The free Wikipedia search returned no matching pages. Do not pretend that a broad web search was completed.");
         }
       } catch (_) {
-        context.push("The free external research provider is temporarily unavailable. Do not invent search results.");
+        context.push("The free reference search provider is temporarily unavailable. Do not invent search results.");
       }
     }
   }
-  return { context: context.join("\n\n"), sources };
+  return { context: context.join("\\n\\n"), sources };
 };
 
 export default {
