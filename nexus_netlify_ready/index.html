@@ -1568,6 +1568,25 @@ status.setAttribute("aria-label", "Problem status");
    checks.textContent = evaluation.checks.map(item => (item.pass ? "✓ " : "· ") + item.label).join(" | ");
    researchStatus.appendChild(checks);
   }
+  const modelReview = evaluation && evaluation.modelReview;
+  if (modelReview && Number.isFinite(modelReview.factual_grounding)) {
+   const scoreLine = document.createElement("div");
+   scoreLine.style.marginTop = "4px";
+   scoreLine.textContent = "Independent review · grounding " + modelReview.factual_grounding + "/5 · source match " +
+    modelReview.source_alignment + "/5 · uncertainty " + modelReview.uncertainty_handling + "/5 · completeness " +
+    modelReview.completeness + "/5 · " + modelReview.verdict;
+   researchStatus.appendChild(scoreLine);
+   if (Array.isArray(modelReview.unsupported_claims) && modelReview.unsupported_claims.length) {
+    const issues = document.createElement("div");
+    issues.style.marginTop = "3px";
+    issues.textContent = "Review flags: " + modelReview.unsupported_claims.join("; ");
+    researchStatus.appendChild(issues);
+   }
+  } else if (modelReview && modelReview.status === "unavailable") {
+   const unavailable = document.createElement("div");
+   unavailable.textContent = "Independent review unavailable; basic checks shown.";
+   researchStatus.appendChild(unavailable);
+  }
   const sourceTitle = document.createElement("div");
   sourceTitle.style.marginTop = "4px";
   sourceTitle.textContent = sources.length ? "Retrieved public sources:" : "No external source retrieved for this answer.";
