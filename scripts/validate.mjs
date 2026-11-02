@@ -72,6 +72,14 @@ const required = [
   ["evolution schema grants no anonymous access", !fs.readFileSync(path.join(root, "supabase/migrations/20261102000100_nexus_evolution_engine.sql"), "utf8").match(/grant[^;]+to anon/i)],
   ["VAE experiment uses synthetic data", fs.readFileSync(path.join(root, "research/vae_toy.py"), "utf8").includes("make_synthetic_data")],
 ];
+const storeTest = spawnSync(process.execPath, [path.join(root, "scripts/test-supabase-store.mjs")], { encoding: "utf8" });
+if (storeTest.status !== 0) {
+  process.stderr.write(storeTest.stderr || storeTest.stdout || "Supabase store tests failed\\n");
+  process.exitCode = 1;
+} else {
+  process.stdout.write(storeTest.stdout);
+}
+
 const evolutionTest = spawnSync(process.execPath, [path.join(root, "scripts/test-evolution.mjs")], { encoding: "utf8" });
 if (evolutionTest.status !== 0) {
   process.stderr.write(evolutionTest.stderr || evolutionTest.stdout || "Evolution Engine tests failed\\n");
