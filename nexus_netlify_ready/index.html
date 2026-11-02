@@ -1527,6 +1527,7 @@ status.setAttribute("aria-label", "Problem status");
 </div>
 <div id="kafai-messages" aria-live="polite"></div>
 <div id="kafai-note">Chats are saved only in this browser on this device.</div>
+<div id="kafai-research-status" aria-live="polite" style="padding:9px 12px;border-top:1px solid #29344a;color:#b8c6dc;font-size:11px">Research sources and answer evaluation will appear here.</div>
 <label id="kafai-memory-toggle" style="display:flex;align-items:center;gap:7px;padding:0 12px 8px;color:#b8c6dc;font-size:11px">
  <input type="checkbox" id="kafai-use-memory" checked>
  Use my saved NEXUS memories when signed in
@@ -1551,6 +1552,45 @@ status.setAttribute("aria-label", "Problem status");
  const input = document.getElementById("kafai-input");
  const send = document.getElementById("kafai-send");
  const historySelect = document.getElementById("kafai-history");
+ const researchStatus = document.getElementById("kafai-research-status");
+ function showResearchStatus(data) {
+  if (!researchStatus) return;
+  researchStatus.replaceChildren();
+  const evaluation = data && data.evaluation;
+  const sources = data && data.realWorld && Array.isArray(data.realWorld.sources) ? data.realWorld.sources : [];
+  const title = document.createElement("strong");
+  title.textContent = evaluation ? "Answer checks: " + evaluation.passed + "/" + evaluation.total : "Research status";
+  researchStatus.appendChild(title);
+  if (evaluation && Array.isArray(evaluation.checks)) {
+   const checks = document.createElement("div");
+   checks.style.marginTop = "4px";
+   checks.textContent = evaluation.checks.map(item => (item.pass ? "✓ " : "· ") + item.label).join(" | ");
+   researchStatus.appendChild(checks);
+  }
+  const sourceTitle = document.createElement("div");
+  sourceTitle.style.marginTop = "4px";
+  sourceTitle.textContent = sources.length ? "Retrieved public sources:" : "No external source retrieved for this answer.";
+  researchStatus.appendChild(sourceTitle);
+  sources.slice(0, 5).forEach(source => {
+   if (!source || typeof source.url !== "string" || !/^https?:\/\//i.test(source.url)) return;
+   const link = document.createElement("a");
+   link.href = source.url;
+   link.target = "_blank";
+   link.rel = "noopener noreferrer";
+   link.textContent = source.title || source.url;
+   link.style.display = "block";
+   link.style.color = "#74e7da";
+   link.style.overflowWrap = "anywhere";
+   researchStatus.appendChild(link);
+  });
+  if (evaluation && evaluation.disclaimer) {
+   const disclaimer = document.createElement("small");
+   disclaimer.textContent = evaluation.disclaimer;
+   disclaimer.style.display = "block";
+   disclaimer.style.marginTop = "4px";
+   researchStatus.appendChild(disclaimer);
+  }
+ }
  let chats = loadChats();
  let activeId = localStorage.getItem(ACTIVE_KEY) || "";
 
@@ -1738,6 +1778,7 @@ status.setAttribute("aria-label", "Problem status");
     throw new Error(data.error || "Request failed");
    }
    pending.textContent = data.reply;
+   showResearchStatus(data);
    const memory = data.memory && typeof data.memory.status === "string"
     ? {
      status: data.memory.status,
