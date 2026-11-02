@@ -102,7 +102,7 @@ const getOpenKnowledgeContext = async (message) => {
       }
     } catch (_) { context.push("Project Gutenberg catalogue is temporarily unavailable."); }
   }
-  const videoMatch = message.match(/https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\\?v=|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i);
+  const videoMatch = message.match(/https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i);
   if (videoMatch) {
     try {
       const data = await fetchPublicJson("https://www.youtube.com/oembed?url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + videoMatch[1]) + "&format=json");
