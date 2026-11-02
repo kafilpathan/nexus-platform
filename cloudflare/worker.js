@@ -117,7 +117,8 @@ const getRealWorldContext = async (message) => {
   }
   return { context: context.join("\n\n"), sources };
 };
-\nexport default {
+
+export default {
  async fetch(request, env) {
   const corsHeaders = {
    "Access-Control-Allow-Origin": "*",
