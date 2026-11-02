@@ -40,17 +40,17 @@ const weatherCodeLabel = (code) => ({
 const getRealWorldContext = async (message) => {
   const context = [];
   const sources = [];
-  const weatherIntent = /\\b(weather|forecast|temperature|mausam|mosam|baarish|barish)\\b/i.test(message);
+  const weatherIntent = /\b(weather|forecast|temperature|mausam|mosam|baarish|barish)\b/i.test(message);
   if (weatherIntent) {
     let place = "";
     const patterns = [
-      /(?:weather|forecast|temperature|mausam|mosam)\\s+(?:in|at|for|of)?\\s*([a-z][a-z .'-]{1,60})/i,
-      /([a-z][a-z .'-]{1,60})\\s+(?:ka|ki|mein)\\s+(?:weather|mausam|mosam)/i,
-      /(?:in|at|for)\\s+([a-z][a-z .'-]{1,60})/i
+      /(?:weather|forecast|temperature|mausam|mosam)\s+(?:in|at|for|of)?\s*([a-z][a-z .'-]{1,60})/i,
+      /([a-z][a-z .'-]{1,60})\s+(?:ka|ki|mein)\s+(?:weather|mausam|mosam)/i,
+      /(?:in|at|for)\s+([a-z][a-z .'-]{1,60})/i
     ];
     for (const pattern of patterns) {
       const match = message.match(pattern);
-      if (match) { place = match[1].replace(/\\b(today|tomorrow|now|please|right now)\\b/gi, "").trim(); break; }
+      if (match) { place = match[1].replace(/\b(today|tomorrow|now|please|right now)\b/gi, "").trim(); break; }
     }
     if (place) {
       try {
@@ -85,11 +85,11 @@ const getRealWorldContext = async (message) => {
     }
   }
 
-  const explicitResearch = /\\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia)\\b/i.test(message);
+  const explicitResearch = /\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia)\b/i.test(message);
   if (explicitResearch) {
     const query = message
-      .replace(/\\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|please|about)\\b/gi, " ")
-      .replace(/\\s+/g, " ").trim();
+      .replace(/\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|please|about)\b/gi, " ")
+      .replace(/\s+/g, " ").trim();
     if (query) {
       try {
         const search = await fetchPublicJson("https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=" +
@@ -104,8 +104,8 @@ const getRealWorldContext = async (message) => {
           }
         }));
         if (pages.length) {
-          context.push("EXTERNAL RESEARCH RESULTS (Wikipedia; reference material, may be incomplete or outdated):\\n" +
-            pages.map((page, index) => (index + 1) + ". " + page.title + ": " + page.extract.slice(0, 1200) + "\\nSource: " + page.url).join("\\n"));
+          context.push("EXTERNAL RESEARCH RESULTS (Wikipedia; reference material, may be incomplete or outdated):\n" +
+            pages.map((page, index) => (index + 1) + ". " + page.title + ": " + page.extract.slice(0, 1200) + "\nSource: " + page.url).join("\n"));
           pages.forEach(page => sources.push({ title: page.title, url: page.url }));
         } else {
           context.push("The free Wikipedia search returned no matching pages. Do not pretend that a broad web search was completed.");
@@ -115,7 +115,7 @@ const getRealWorldContext = async (message) => {
       }
     }
   }
-  return { context: context.join("\\n\\n"), sources };
+  return { context: context.join("\n\n"), sources };
 };
 \nexport default {
  async fetch(request, env) {
