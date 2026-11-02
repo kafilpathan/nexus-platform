@@ -41,16 +41,16 @@ const getRealWorldContext = async (message) => {
   const context = [];
   const sources = [];
   const cleanQuery = (value) => value
-    .replace(/\\b(today|tomorrow|now|please|right now|latest|recent|news|about|for me|search|the web|internet|online|research|wikipedia|scientific|science|papers?|studies)\\b/gi, " ")
-    .replace(/\\s+/g, " ").trim();
+    .replace(/\b(today|tomorrow|now|please|right now|latest|recent|news|about|for me|search|the web|internet|online|research|wikipedia|scientific|science|papers?|studies)\b/gi, " ")
+    .replace(/\s+/g, " ").trim();
 
-  const weatherIntent = /\\b(weather|forecast|temperature|mausam|mosam|baarish|barish)\\b/i.test(message);
+  const weatherIntent = /\b(weather|forecast|temperature|mausam|mosam|baarish|barish)\b/i.test(message);
   if (weatherIntent) {
     let place = "";
     const patterns = [
-      /(?:weather|forecast|temperature|mausam|mosam)\\s+(?:in|at|for|of)?\\s*([a-z][a-z .'-]{1,60})/i,
-      /([a-z][a-z .'-]{1,60})\\s+(?:ka|ki|mein)\\s+(?:weather|mausam|mosam)/i,
-      /(?:in|at|for)\\s+([a-z][a-z .'-]{1,60})/i
+      /(?:weather|forecast|temperature|mausam|mosam)\s+(?:in|at|for|of)?\s*([a-z][a-z .'-]{1,60})/i,
+      /([a-z][a-z .'-]{1,60})\s+(?:ka|ki|mein)\s+(?:weather|mausam|mosam)/i,
+      /(?:in|at|for)\s+([a-z][a-z .'-]{1,60})/i
     ];
     for (const pattern of patterns) {
       const match = message.match(pattern);
@@ -89,7 +89,7 @@ const getRealWorldContext = async (message) => {
     }
   }
 
-  const newsIntent = /\\b(latest news|recent news|news about|news on|breaking news|headlines|samachar|taaza khabar|taaja khabar)\\b/i.test(message);
+  const newsIntent = /\b(latest news|recent news|news about|news on|breaking news|headlines|samachar|taaza khabar|taaja khabar)\b/i.test(message);
   if (newsIntent) {
     const query = cleanQuery(message);
     if (query) {
@@ -101,11 +101,11 @@ const getRealWorldContext = async (message) => {
         const data = await fetchPublicJson("https://api.gdeltproject.org/api/v2/doc/doc?" + params.toString());
         const articles = (data.articles || []).slice(0, 5);
         if (articles.length) {
-          context.push("RECENT NEWS RESULTS (GDELT; article metadata from external publishers; verify dates and publisher claims):\\n" +
+          context.push("RECENT NEWS RESULTS (GDELT; article metadata from external publishers; verify dates and publisher claims):\n" +
             articles.map((item, index) => (index + 1) + ". " + (item.title || "Untitled") +
               " | publisher: " + (item.domain || "unknown") +
               " | published: " + (item.seendate || "date unavailable") +
-              " | URL: " + (item.url || "unavailable")).join("\\n"));
+              " | URL: " + (item.url || "unavailable")).join("\n"));
           articles.forEach(item => { if (item.url) sources.push({ title: item.title || item.domain || "News article", url: item.url }); });
         } else {
           context.push("GDELT returned no matching recent news articles. Do not invent headlines.");
@@ -116,7 +116,7 @@ const getRealWorldContext = async (message) => {
     }
   }
 
-  const scienceIntent = /\\b(scientific papers?|research papers?|science research|studies on|academic papers?)\\b/i.test(message);
+  const scienceIntent = /\b(scientific papers?|research papers?|science research|studies on|academic papers?)\b/i.test(message);
   if (scienceIntent) {
     const query = cleanQuery(message);
     if (query) {
@@ -128,11 +128,11 @@ const getRealWorldContext = async (message) => {
         const data = await fetchPublicJson("https://api.crossref.org/works?" + params.toString());
         const works = (data.message?.items || []).slice(0, 4);
         if (works.length) {
-          context.push("SCIENTIFIC / ACADEMIC PUBLICATIONS (Crossref metadata; this is not a full-text search):\\n" +
+          context.push("SCIENTIFIC / ACADEMIC PUBLICATIONS (Crossref metadata; this is not a full-text search):\n" +
             works.map((work, index) => (index + 1) + ". " + ((work.title || ["Untitled"])[0]) +
               " | journal: " + ((work["container-title"] || ["unknown"])[0]) +
               " | published: " + (work.published?.["date-parts"]?.[0]?.join("-") || "unknown") +
-              " | DOI/article URL: " + (work.URL || "unavailable")).join("\\n"));
+              " | DOI/article URL: " + (work.URL || "unavailable")).join("\n"));
           works.forEach(work => { if (work.URL) sources.push({ title: (work.title || ["Research paper"])[0], url: work.URL }); });
         } else {
           context.push("Crossref returned no matching publications. Do not invent paper titles or findings.");
@@ -143,11 +143,11 @@ const getRealWorldContext = async (message) => {
     }
   }
 
-  const explicitResearch = /\\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|education|history of|what is the geography of|where is)\\b/i.test(message);
+  const explicitResearch = /\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|education|history of|what is the geography of|where is)\b/i.test(message);
   if (explicitResearch) {
     const query = message
-      .replace(/\\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|please|about)\\b/gi, " ")
-      .replace(/\\s+/g, " ").trim();
+      .replace(/\b(search (?:the )?(?:web|internet|online)|look up online|research online|wikipedia|please|about)\b/gi, " ")
+      .replace(/\s+/g, " ").trim();
     if (query) {
       try {
         const search = await fetchPublicJson("https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=" +
@@ -162,8 +162,8 @@ const getRealWorldContext = async (message) => {
           }
         }));
         if (pages.length) {
-          context.push("REFERENCE / EDUCATION / GEOGRAPHY RESULTS (Wikipedia; may be incomplete or outdated):\\n" +
-            pages.map((page, index) => (index + 1) + ". " + page.title + ": " + page.extract.slice(0, 1200) + "\\nSource: " + page.url).join("\\n"));
+          context.push("REFERENCE / EDUCATION / GEOGRAPHY RESULTS (Wikipedia; may be incomplete or outdated):\n" +
+            pages.map((page, index) => (index + 1) + ". " + page.title + ": " + page.extract.slice(0, 1200) + "\nSource: " + page.url).join("\n"));
           pages.forEach(page => sources.push({ title: page.title, url: page.url }));
         } else {
           context.push("The free Wikipedia search returned no matching pages. Do not pretend that a broad web search was completed.");
@@ -173,7 +173,7 @@ const getRealWorldContext = async (message) => {
       }
     }
   }
-  return { context: context.join("\\n\\n"), sources };
+  return { context: context.join("\n\n"), sources };
 };
 
 export default {
