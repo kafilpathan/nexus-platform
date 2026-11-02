@@ -1554,6 +1554,46 @@ status.setAttribute("aria-label", "Problem status");
  const send = document.getElementById("kafai-send");
  const historySelect = document.getElementById("kafai-history");
  const researchStatus = document.getElementById("kafai-research-status");
+ function renderResearchStatus(data) {
+  if (!researchStatus) return;
+  researchStatus.replaceChildren();
+  const evaluation = data && data.evaluation;
+  const sources = data && data.realWorld && Array.isArray(data.realWorld.sources) ? data.realWorld.sources : [];
+  const heading = document.createElement("strong");
+  heading.textContent = evaluation ? "Answer checks: " + evaluation.passed + "/" + evaluation.total : "Research status";
+  researchStatus.appendChild(heading);
+  if (evaluation && Array.isArray(evaluation.checks)) {
+   const checks = document.createElement("div");
+   checks.style.marginTop = "4px";
+   checks.textContent = evaluation.checks.map(item => (item.pass ? "✓ " : "• ") + item.label).join(" | ");
+   researchStatus.appendChild(checks);
+  }
+  const sourceLabel = document.createElement("div");
+  sourceLabel.style.marginTop = "4px";
+  sourceLabel.textContent = sources.length ? "Public sources (" + sources.length + "):" : "No external source retrieved for this answer.";
+  researchStatus.appendChild(sourceLabel);
+  sources.slice(0, 5).forEach(source => {
+   if (!source || typeof source.url !== "string" || !/^https?:\/\//i.test(source.url)) return;
+   const link = document.createElement("a");
+   link.href = source.url;
+   link.target = "_blank";
+   link.rel = "noopener noreferrer";
+   link.textContent = source.title || source.url;
+   link.style.display = "block";
+   link.style.color = "#74e8d5";
+   link.style.overflowWrap = "anywhere";
+   researchStatus.appendChild(link);
+  });
+  if (evaluation && evaluation.disclaimer) {
+   const disclaimer = document.createElement("small");
+   disclaimer.textContent = evaluation.disclaimer;
+   disclaimer.style.display = "block";
+   disclaimer.style.marginTop = "4px";
+   researchStatus.appendChild(disclaimer);
+  }
+ }
+
+ const researchStatus = document.getElementById("kafai-research-status");
  function showResearchStatus(data) {
   if (!researchStatus) return;
   researchStatus.replaceChildren();
@@ -1779,6 +1819,7 @@ status.setAttribute("aria-label", "Problem status");
     throw new Error(data.error || "Request failed");
    }
    pending.textContent = data.reply;
+   renderResearchStatus(data);
    showResearchStatus(data);
    const memory = data.memory && typeof data.memory.status === "string"
     ? {
