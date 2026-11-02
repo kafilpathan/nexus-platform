@@ -1,0 +1,20 @@
+name: NEXUS Worker validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  worker-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Worker JavaScript syntax
+        run: |
+          cp cloudflare/worker.js /tmp/nexus-worker.mjs
+          node --check /tmp/nexus-worker.mjs
