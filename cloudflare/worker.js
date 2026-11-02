@@ -196,15 +196,15 @@ const reviewAnswerWithModel = async (answer, sourceContext, sourceCount, aiBindi
         },
         {
           role: "user",
-          content: "ANSWER TO REVIEW:\\n" + String(answer || "").slice(0, 5000) +
-            "\\n\\nRETRIEVED SOURCE CONTEXT (may be absent):\\n" + String(sourceContext || "").slice(0, 5000) +
-            "\\n\\nRetrieved source count: " + Number(sourceCount || 0)
+          content: "ANSWER TO REVIEW:\n" + String(answer || "").slice(0, 5000) +
+            "\n\nRETRIEVED SOURCE CONTEXT (may be absent):\n" + String(sourceContext || "").slice(0, 5000) +
+            "\n\nRetrieved source count: " + Number(sourceCount || 0)
         }
       ],
       max_tokens: 260
     });
     const raw = String(review?.response || "").trim();
-    const jsonText = raw.match(/\\{[\\s\\S]*\\}/)?.[0];
+    const jsonText = raw.match(/{[\s\S]*}/)?.[0];
     if (!jsonText) return null;
     const parsed = JSON.parse(jsonText);
     const scoreKeys = ["factual_grounding", "source_alignment", "uncertainty_handling", "completeness"];
