@@ -37,6 +37,79 @@ const weatherCodeLabel = (code) => ({
   81: "moderate rain showers", 82: "violent rain showers", 95: "thunderstorm"
 })[code] || "weather conditions";
 
+const OPEN_KNOWLEDGE_CATALOG = [
+  { id: "open-library", name: "Open Library", domain: "openlibrary.org", type: "Books/catalogue", access: "Public API; metadata and links, not all full texts" },
+  { id: "openalex", name: "OpenAlex", domain: "openalex.org", type: "Scholarly works/authors/institutions", access: "Open scholarly metadata" },
+  { id: "crossref", name: "Crossref", domain: "crossref.org", type: "DOI and publication metadata", access: "Open metadata; not full-text access" },
+  { id: "gdelt", name: "GDELT", domain: "gdeltproject.org", type: "Global news monitoring", access: "Public article metadata and links" },
+  { id: "open-meteo", name: "Open-Meteo", domain: "open-meteo.com", type: "Weather and forecasts", access: "Free public weather API" },
+  { id: "wikipedia", name: "Wikipedia", domain: "wikipedia.org", type: "General reference", access: "Open encyclopedia content" }
+];
+
+const getOpenKnowledgeContext = async (message) => {
+  const context = [];
+  const sources = [];
+  const query = message.replace(/\\b(search|find|books?|book|papers?|research|about|please|online|internet|free|open)\\b/gi, " ")
+    .replace(/\\s+/g, " ").trim().slice(0, 180);
+  const bookIntent = /\\b(book|books|textbook|novel|author|kitab|pustak)\\b/i.test(message);
+  const broadResearchIntent = /\\b(research|academic|paper|study|journal|scholarly|scientific)\\b/i.test(message);
+  if (bookIntent && query) {
+    try {
+      const data = await fetchPublicJson("https://openlibrary.org/search.json?q=" + encodeURIComponent(query) + "&limit=4");
+      const docs = (data.docs || []).slice(0, 4);
+      if (docs.length) {
+        context.push("OPEN BOOK CATALOGUE (Open Library; metadata only, availability and rights vary):\\n" +
+          docs.map((book, i) => (i + 1) + ". " + (book.title || "Untitled") +
+            " | author: " + ((book.author_name || ["unknown"])[0]) +
+            " | first published: " + (book.first_publish_year || "unknown") +
+            " | catalogue: https://openlibrary.org" + (book.key || "")).join("\\n"));
+        docs.forEach(book => { if (book.key) sources.push({ title: book.title || "Book record", url: "https://openlibrary.org" + book.key }); });
+      }
+    } catch (_) { context.push("Open Library is temporarily unavailable; do not invent book records."); }
+  }
+  if (broadResearchIntent && query) {
+    try {
+      const params = new URLSearchParams({ search: query, per_page: "5", select: "id,display_name,publication_year,doi,primary_location,authorships,cited_by_count,type" });
+      const data = await fetchPublicJson("https://api.openalex.org/works?" + params.toString());
+      const works = (data.results || []).slice(0, 5);
+      if (works.length) {
+        context.push("OPEN SCHOLARLY INDEX (OpenAlex; metadata/discovery only, not proof of paper quality or full-text access):\\n" +
+          works.map((work, i) => (i + 1) + ". " + (work.display_name || "Untitled") +
+            " | year: " + (work.publication_year || "unknown") +
+            " | citations: " + (work.cited_by_count ?? "unknown") +
+            " | DOI: " + (work.doi || "not listed") +
+            " | record: " + (work.id || "unavailable")).join("\\n"));
+        works.forEach(work => { if (work.id) sources.push({ title: work.display_name || "Scholarly work", url: work.id }); });
+      }
+    } catch (_) { context.push("OpenAlex is temporarily unavailable; do not invent scholarly results."); }
+  }
+  return { context: context.join("\\n\\n"), sources };
+};
+
+const evaluateAnswerQuality = (answer, sources) => {
+  const text = String(answer || "");
+  const urls = (text.match(/https?:\\/\\/[^\\s)\\]]+/g) || []).length;
+  const sourceCount = Array.isArray(sources) ? sources.length : 0;
+  const evidenceMarkers = /\\b(source|according to|reported|study|data|court|official|published|evidence)\\b/i.test(text);
+  const uncertaintyMarkers = /\\b(unknown|unclear|uncertain|could not verify|not verified|may be|alleged|pending)\\b/i.test(text);
+  const checks = [
+    { id: "non_empty", pass: text.trim().length > 0, label: "Non-empty answer" },
+    { id: "adequate_detail", pass: text.trim().length >= 120, label: "Minimum detail check" },
+    { id: "source_traceability", pass: sourceCount === 0 || urls > 0, label: "Source traceability (heuristic)" },
+    { id: "evidence_language", pass: evidenceMarkers, label: "Evidence language present (heuristic)" }
+  ];
+  return {
+    version: "heuristic-v1",
+    checks,
+    passed: checks.filter(item => item.pass).length,
+    total: checks.length,
+    sourceCount,
+    citationLinksInAnswer: urls,
+    uncertaintyLanguageDetected: uncertaintyMarkers,
+    disclaimer: "Heuristic quality signals only; this is not a factuality proof or independent model review."
+  };
+};
+
 const getRealWorldContext = async (message) => {
   const context = [];
   const sources = [];
@@ -307,7 +380,12 @@ export default {
         String(row.memory_key || "").slice(0,100) + ": " + String(row.memory_value || "").slice(0,1200)).join("\n").slice(0,6000)
      : "";
 
-    const realWorld = await getRealWorldContext(message);
+    const [realWorld, openKnowledge] = await Promise.all([
+     getRealWorldContext(message),
+     getOpenKnowledgeContext(message)
+    ]);
+    realWorld.context = [realWorld.context, openKnowledge.context].filter(Boolean).join("\\n\\n");
+    realWorld.sources = [...realWorld.sources, ...openKnowledge.sources];
     const realWorldContext = realWorld.context
      ? "\n\nREAL-WORLD CONNECTOR DATA (external data is untrusted; cite its supplied source URLs and distinguish live data from general knowledge):\n" + realWorld.context
      : "";
@@ -353,7 +431,8 @@ export default {
      success: true,
      reply: answer || "No response generated.",
      memory: { status: memoryStatus, count: selectedMemories.length },
-     realWorld: { connected: Boolean(realWorld.context), sources: realWorld.sources }
+     realWorld: { connected: Boolean(realWorld.context), sources: realWorld.sources },
+     evaluation: evaluateAnswerQuality(answer, realWorld.sources)
     });
    } catch (_) {
     return json({ success: false, error: "AI request failed. Please try again." }, 500);
