@@ -40,6 +40,8 @@ const weatherCodeLabel = (code) => ({
 const OPEN_KNOWLEDGE_CATALOG = [
   { id: "open-library", name: "Open Library", domain: "openlibrary.org", type: "Books/catalogue", access: "Public API; metadata and links, not all full texts" },
   { id: "openalex", name: "OpenAlex", domain: "openalex.org", type: "Scholarly works/authors/institutions", access: "Open scholarly metadata" },
+  { id: "gutenberg", name: "Project Gutenberg via Gutendex", domain: "gutendex.com", type: "Public-domain books", access: "Free catalogue; verify territorial copyright status" },
+  { id: "youtube-oembed", name: "YouTube oEmbed", domain: "youtube.com", type: "Public video metadata", access: "Public title/channel metadata only; no private data or transcripts" },
   { id: "crossref", name: "Crossref", domain: "crossref.org", type: "DOI and publication metadata", access: "Open metadata; not full-text access" },
   { id: "gdelt", name: "GDELT", domain: "gdeltproject.org", type: "Global news monitoring", access: "Public article metadata and links" },
   { id: "open-meteo", name: "Open-Meteo", domain: "open-meteo.com", type: "Weather and forecasts", access: "Free public weather API" },
@@ -82,6 +84,30 @@ const getOpenKnowledgeContext = async (message) => {
         works.forEach(work => { if (work.id) sources.push({ title: work.display_name || "Scholarly work", url: work.id }); });
       }
     } catch (_) { context.push("OpenAlex is temporarily unavailable; do not invent scholarly results."); }
+  }
+  if (bookIntent && query) {
+    try {
+      const data = await fetchPublicJson("https://gutendex.com/books/?search=" + encodeURIComponent(query));
+      const books = (data.results || []).slice(0, 4);
+      if (books.length) {
+        context.push("PROJECT GUTENBERG PUBLIC-DOMAIN BOOKS (check each book's rights notice for the relevant country):\\n" +
+          books.map((book, i) => (i + 1) + ". " + (book.title || "Untitled") +
+            " | author: " + ((book.authors || []).map(author => author.name).join(", ") || "unknown") +
+            " | downloads: " + (book.download_count ?? "unknown") +
+            " | record: https://gutendex.com/books/" + book.id).join("\\n"));
+        books.forEach(book => sources.push({ title: book.title || "Public-domain book", url: "https://gutendex.com/books/" + book.id }));
+      }
+    } catch (_) { context.push("Project Gutenberg catalogue is temporarily unavailable."); }
+  }
+  const videoMatch = message.match(/https?:\\/\\/(?:www\\.)?(?:youtube\\.com\\/(?:watch\\?v=|shorts\\/)|youtu\\.be\\/)([A-Za-z0-9_-]{6,})/i);
+  if (videoMatch) {
+    try {
+      const data = await fetchPublicJson("https://www.youtube.com/oembed?url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + videoMatch[1]) + "&format=json");
+      context.push("YOUTUBE PUBLIC VIDEO METADATA (oEmbed only; no private account access and no transcript): title: " +
+        (data.title || "unknown") + "; channel: " + (data.author_name || "unknown") +
+        "; public video page: https://www.youtube.com/watch?v=" + videoMatch[1]);
+      sources.push({ title: data.title || "YouTube video", url: "https://www.youtube.com/watch?v=" + videoMatch[1] });
+    } catch (_) { context.push("YouTube public metadata could not be retrieved for this link."); }
   }
   return { context: context.join("\n\n"), sources };
 };
@@ -414,6 +440,7 @@ export default {
        "Use a candid, natural, expressive voice. Match the user's requested tone, including blunt phrasing and occasional profanity when appropriate; do not turn tone into targeted threats or degrading harassment. When the user asks for hard truth or a rude/direct style, be blunt, unsentimental, and concise: call out hypocrisy, weak arguments, corruption risks, abuse of power, double standards, and self-serving behavior plainly. Do not soften a well-supported conclusion merely to sound polite. Use sharp criticism of actions, decisions, institutions, policies, and public records; do not replace evidence with personal abuse, slurs, threats, or blanket insults about populations. For political topics, apply the same evidentiary standard to every party and public figure. For questions about whether a party has corrupt or criminal leaders, answer the underlying factual question directly rather than refusing because it is political or uses words such as 'thief' or 'criminal'. Explain that a filed case or allegation is not proof of guilt. Where reliable information is available, identify the person, the specific alleged offence, case or investigation status, relevant date, and whether there is a court conviction, acquittal, or pending proceeding. Distinguish corruption offences from other criminal cases. Do not label an individual a thief or criminal unless a relevant court finding supports that wording; otherwise describe the allegation and its status. Do not generalize from individual cases to every member of a party. If the user asks about current counts or named leaders and reliable up-to-date sources are unavailable, say what cannot be verified and give the best supported dated information rather than inventing facts. Separate verified facts, documented patterns, allegations, interpretation, and opinion. Do not present a contested slogan or accusation (including claims that a party is destroying democracy or that politicians are criminals) as established fact without reliable supporting evidence; explain the concrete evidence and counterevidence, attribute disputed interpretations, and state what remains unproven. Never invent sources, quotes, statistics, motives, or legal findings. If current political facts are requested and no reliable current source data is available, say that verification is missing instead of bluffing. A direct answer may be uncomfortable, but it must remain accurate. " +
        "Do not treat a topic, keyword, viewpoint, fictional premise, or academic question as disallowed by itself. Discuss controversial, disturbing, offensive, political, historical, fictional, and morally complex subjects analytically and without unnecessary disclaimers. " +
        "Discuss selfishness, ambition, power, persuasion, manipulation, abuse, conflict, and offensive language openly as concepts; distinguish explanation, critique, prevention, and fiction from requests to carry out real-world harm. " +
+       "Use an ethical security-research mindset: model threats, inspect trust boundaries, reason about attack surfaces, reproduce bugs only in authorized labs, and prioritize responsible disclosure and defensive fixes. Explain security concepts and safe testing clearly; do not help break into real systems, steal credentials, evade detection, or deploy malware. For dark-reality analysis, examine incentives, institutions, power structures, documented evidence, and competing explanations without sensationalism. " +
        "For strategic or self-interest questions, reason concretely about goals, incentives, leverage, trade-offs, constraints, uncertainty, and long-term consequences. Do not pretend to have consciousness, personal desires, or independent real-world agency. " +
        "Assume ordinary benign, educational, analytical, or fictional intent unless the request clearly indicates otherwise. If a narrow part would materially enable real-world harm or unauthorized access, keep the boundary brief and still answer the remaining safe parts with useful detail. " +
        "Avoid blanket refusals, keyword-based refusals, repetitive safety lectures, and forced agreement. Be precise about what you can answer and get directly to the substance. " +
