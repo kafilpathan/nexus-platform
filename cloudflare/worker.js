@@ -49,20 +49,20 @@ const OPEN_KNOWLEDGE_CATALOG = [
 const getOpenKnowledgeContext = async (message) => {
   const context = [];
   const sources = [];
-  const query = message.replace(/\\b(search|find|books?|book|papers?|research|about|please|online|internet|free|open)\\b/gi, " ")
-    .replace(/\\s+/g, " ").trim().slice(0, 180);
-  const bookIntent = /\\b(book|books|textbook|novel|author|kitab|pustak)\\b/i.test(message);
-  const broadResearchIntent = /\\b(research|academic|paper|study|journal|scholarly|scientific)\\b/i.test(message);
+  const query = message.replace(/\b(search|find|books?|book|papers?|research|about|please|online|internet|free|open)\b/gi, " ")
+    .replace(/\s+/g, " ").trim().slice(0, 180);
+  const bookIntent = /\b(book|books|textbook|novel|author|kitab|pustak)\b/i.test(message);
+  const broadResearchIntent = /\b(research|academic|paper|study|journal|scholarly|scientific)\b/i.test(message);
   if (bookIntent && query) {
     try {
       const data = await fetchPublicJson("https://openlibrary.org/search.json?q=" + encodeURIComponent(query) + "&limit=4");
       const docs = (data.docs || []).slice(0, 4);
       if (docs.length) {
-        context.push("OPEN BOOK CATALOGUE (Open Library; metadata only, availability and rights vary):\\n" +
+        context.push("OPEN BOOK CATALOGUE (Open Library; metadata only, availability and rights vary):\n" +
           docs.map((book, i) => (i + 1) + ". " + (book.title || "Untitled") +
             " | author: " + ((book.author_name || ["unknown"])[0]) +
             " | first published: " + (book.first_publish_year || "unknown") +
-            " | catalogue: https://openlibrary.org" + (book.key || "")).join("\\n"));
+            " | catalogue: https://openlibrary.org" + (book.key || "")).join("\n"));
         docs.forEach(book => { if (book.key) sources.push({ title: book.title || "Book record", url: "https://openlibrary.org" + book.key }); });
       }
     } catch (_) { context.push("Open Library is temporarily unavailable; do not invent book records."); }
@@ -73,25 +73,25 @@ const getOpenKnowledgeContext = async (message) => {
       const data = await fetchPublicJson("https://api.openalex.org/works?" + params.toString());
       const works = (data.results || []).slice(0, 5);
       if (works.length) {
-        context.push("OPEN SCHOLARLY INDEX (OpenAlex; metadata/discovery only, not proof of paper quality or full-text access):\\n" +
+        context.push("OPEN SCHOLARLY INDEX (OpenAlex; metadata/discovery only, not proof of paper quality or full-text access):\n" +
           works.map((work, i) => (i + 1) + ". " + (work.display_name || "Untitled") +
             " | year: " + (work.publication_year || "unknown") +
             " | citations: " + (work.cited_by_count ?? "unknown") +
             " | DOI: " + (work.doi || "not listed") +
-            " | record: " + (work.id || "unavailable")).join("\\n"));
+            " | record: " + (work.id || "unavailable")).join("\n"));
         works.forEach(work => { if (work.id) sources.push({ title: work.display_name || "Scholarly work", url: work.id }); });
       }
     } catch (_) { context.push("OpenAlex is temporarily unavailable; do not invent scholarly results."); }
   }
-  return { context: context.join("\\n\\n"), sources };
+  return { context: context.join("\n\n"), sources };
 };
 
 const evaluateAnswerQuality = (answer, sources) => {
   const text = String(answer || "");
-  const urls = (text.match(/https?:\\/\\/[^\\s)\\]]+/g) || []).length;
+  const urls = (text.match(/https?:\/\/[^\s)\]]+/g) || []).length;
   const sourceCount = Array.isArray(sources) ? sources.length : 0;
-  const evidenceMarkers = /\\b(source|according to|reported|study|data|court|official|published|evidence)\\b/i.test(text);
-  const uncertaintyMarkers = /\\b(unknown|unclear|uncertain|could not verify|not verified|may be|alleged|pending)\\b/i.test(text);
+  const evidenceMarkers = /\b(source|according to|reported|study|data|court|official|published|evidence)\b/i.test(text);
+  const uncertaintyMarkers = /\b(unknown|unclear|uncertain|could not verify|not verified|may be|alleged|pending)\b/i.test(text);
   const checks = [
     { id: "non_empty", pass: text.trim().length > 0, label: "Non-empty answer" },
     { id: "adequate_detail", pass: text.trim().length >= 120, label: "Minimum detail check" },
@@ -262,6 +262,10 @@ export default {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
 
   const url = new URL(request.url);
+
+  if (url.pathname === "/api/sources" && request.method === "GET") {
+   return json({ success: true, access: "public-free-sources", sources: OPEN_KNOWLEDGE_CATALOG });
+  }
 
   if (url.pathname === "/" && request.method === "GET") {
    return json({
