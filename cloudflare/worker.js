@@ -333,7 +333,8 @@ export default {
     return json({
      success: true,
      reply: answer || "No response generated.",
-     memory: { status: memoryStatus, count: selectedMemories.length }
+     memory: { status: memoryStatus, count: selectedMemories.length },
+     realWorld: { connected: Boolean(realWorld.context), sources: realWorld.sources }
     });
    } catch (_) {
     return json({ success: false, error: "AI request failed. Please try again." }, 500);
