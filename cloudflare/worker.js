@@ -45,7 +45,10 @@ const OPEN_KNOWLEDGE_CATALOG = [
   { id: "crossref", name: "Crossref", domain: "crossref.org", type: "DOI and publication metadata", access: "Open metadata; not full-text access" },
   { id: "gdelt", name: "GDELT", domain: "gdeltproject.org", type: "Global news monitoring", access: "Public article metadata and links" },
   { id: "open-meteo", name: "Open-Meteo", domain: "open-meteo.com", type: "Weather and forecasts", access: "Free public weather API" },
-  { id: "wikipedia", name: "Wikipedia", domain: "wikipedia.org", type: "General reference", access: "Open encyclopedia content" }
+  { id: "wikipedia", name: "Wikipedia", domain: "wikipedia.org", type: "General reference", access: "Open encyclopedia content" },
+  { id: "wikidata", name: "Wikidata", domain: "wikidata.org", type: "Structured public knowledge graph", access: "Public query/API access" },
+  { id: "europe-pmc", name: "Europe PMC", domain: "europepmc.org", type: "Biomedical literature", access: "Open metadata and selected full text" },
+  { id: "internet-archive", name: "Internet Archive", domain: "archive.org", type: "Books, media and historical web archives", access: "Public catalogue; item rights vary" }
 ];
 
 const getOpenKnowledgeContext = async (message) => {
@@ -108,6 +111,53 @@ const getOpenKnowledgeContext = async (message) => {
         "; public video page: https://www.youtube.com/watch?v=" + videoMatch[1]);
       sources.push({ title: data.title || "YouTube video", url: "https://www.youtube.com/watch?v=" + videoMatch[1] });
     } catch (_) { context.push("YouTube public metadata could not be retrieved for this link."); }
+  }
+
+  if (broadResearchIntent && query) {
+    try {
+      const params = new URLSearchParams({ query, format: "json", pageSize: "4", resultType: "core" });
+      const data = await fetchPublicJson("https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + params.toString());
+      const results = (data.resultList?.result || []).slice(0, 4);
+      if (results.length) {
+        context.push("EUROPE PMC BIOMEDICAL LITERATURE (metadata; access and peer-review status vary):\n" +
+          results.map((item, n) => (n + 1) + ". " + (item.title || "Untitled") +
+            " | journal: " + (item.journalTitle || "unknown") +
+            " | year: " + (item.firstPublicationDate || "unknown") +
+            " | record: https://europepmc.org/article/MED/" + (item.pmid || item.id || "")).join("\n"));
+        results.forEach(item => {
+          const id = item.pmid || item.id;
+          if (id) sources.push({ title: item.title || "Europe PMC record", url: "https://europepmc.org/article/MED/" + id });
+        });
+      }
+    } catch (_) { context.push("Europe PMC is temporarily unavailable; do not invent biomedical references."); }
+  }
+  if (bookIntent && query) {
+    try {
+      const params = new URLSearchParams({ q: query, fl: "identifier,title,creator,date,mediatype", rows: "4", output: "json" });
+      const data = await fetchPublicJson("https://archive.org/advancedsearch.php?" + params.toString());
+      const docs = (data.response?.docs || []).slice(0, 4);
+      if (docs.length) {
+        context.push("INTERNET ARCHIVE CATALOGUE (public discovery; lending, download and reuse rights vary):\n" +
+          docs.map((item, n) => (n + 1) + ". " + (item.title || "Untitled") +
+            " | creator: " + (item.creator || "unknown") +
+            " | date: " + (item.date || "unknown") +
+            " | item: https://archive.org/details/" + (item.identifier || "")).join("\n"));
+        docs.forEach(item => { if (item.identifier) sources.push({ title: item.title || "Archive item", url: "https://archive.org/details/" + item.identifier }); });
+      }
+    } catch (_) { context.push("Internet Archive catalogue is temporarily unavailable; do not invent archive records."); }
+  }
+  if (/\b(wikidata|knowledge graph|structured data|entity lookup)\b/i.test(message) && query) {
+    try {
+      const params = new URLSearchParams({ action: "wbsearchentities", search: query, language: "en", format: "json", limit: "4" });
+      const data = await fetchPublicJson("https://www.wikidata.org/w/api.php?" + params.toString());
+      const items = (data.search || []).slice(0, 4);
+      if (items.length) {
+        context.push("WIKIDATA PUBLIC KNOWLEDGE GRAPH (entity matches; verify claims against primary sources):\n" +
+          items.map((item, n) => (n + 1) + ". " + item.label + " (" + item.id + "): " + (item.description || "No description") +
+            " | https://www.wikidata.org/wiki/" + item.id).join("\n"));
+        items.forEach(item => sources.push({ title: item.label || item.id, url: "https://www.wikidata.org/wiki/" + item.id }));
+      }
+    } catch (_) { context.push("Wikidata is temporarily unavailable; do not invent entity matches."); }
   }
   return { context: context.join("\n\n"), sources };
 };
