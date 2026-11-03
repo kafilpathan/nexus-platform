@@ -27,3 +27,9 @@ test("rejects insecure edge provenance and malformed digests", () => {
   assert.throws(() => normalizeKnowledgeEdgeProvenance({ source_url: "http://example.org" }), TypeError);
   assert.throws(() => normalizeKnowledgeEdgeProvenance({ content_sha256: "not-a-hash" }), TypeError);
 });
+
+test("rejects null and empty confidence instead of coercing them to zero", () => {
+  for (const confidence of [null, ""]) {
+    assert.equal(validateKnowledgeEdge({ source_node_id: a, target_node_id: b, relation_type: "supports", confidence }).valid, false);
+  }
+});
