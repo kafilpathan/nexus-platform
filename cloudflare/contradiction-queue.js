@@ -20,6 +20,6 @@ export function buildContradictionReviewQueue(edges) {
       if (a.confidence === null && b.confidence !== null) return 1;
       if (a.confidence !== null && b.confidence === null) return -1;
       if (a.confidence !== b.confidence) return (b.confidence ?? 0) - (a.confidence ?? 0);
-      return String(b.created_at || "").localeCompare(String(a.created_at || ""));
+      return String(b.created_at || "").localeCompare(String(a.created_at || "")) || String(b.id || "").localeCompare(String(a.id || ""));
     });
 }
