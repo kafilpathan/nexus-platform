@@ -1,0 +1,11 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { validateKnowledgeEdge } from "../cloudflare/knowledge-edge-integrity.js";
+const a = "123e4567-e89b-42d3-a456-426614174000";
+const b = "123e4567-e89b-42d3-a456-426614174001";
+test("normalizes valid edge relations and confidence", () => { const r = validateKnowledgeEdge({ source_node_id: a, target_node_id: b, relation_type: " Supports ", confidence: 0.8 }); assert.equal(r.valid, true); assert.equal(r.edge.relation_type, "supports"); });
+test("rejects invalid UUIDs and self edges", () => { assert.equal(validateKnowledgeEdge({ source_node_id: "bad", target_node_id: b, relation_type: "supports" }).valid, false); assert.equal(validateKnowledgeEdge({ source_node_id: a, target_node_id: a, relation_type: "supports" }).valid, false); });
+test("rejects malformed relation identifiers", () => { for (const relation_type of ["", "has spaces", "x".repeat(61), "UPPER CASE"]) assert.equal(validateKnowledgeEdge({ source_node_id: a, target_node_id: b, relation_type }).valid, false); });
+test("rejects confidence outside inclusive range", () => { for (const confidence of [-0.1, 1.1, NaN, Infinity]) assert.equal(validateKnowledgeEdge({ source_node_id: a, target_node_id: b, relation_type: "supports", confidence }).valid, false); });
+test("rejects duplicate directed edges independent of relation case", () => { const existing = [{ source_node_id: a, target_node_id: b, relation_type: "SUPPORTS" }]; const r = validateKnowledgeEdge({ source_node_id: a, target_node_id: b, relation_type: "supports" }, existing); assert.equal(r.valid, false); assert.equal(r.duplicate, true); });
+test("allows reverse edge because direction is meaningful", () => { const existing = [{ source_node_id: a, target_node_id: b, relation_type: "supports" }]; assert.equal(validateKnowledgeEdge({ source_node_id: b, target_node_id: a, relation_type: "supports" }, existing).valid, true); });
