@@ -1,6 +1,7 @@
 import { BENCHMARK_SUITE_VERSION, getBenchmarkSuite } from "./benchmark-suite.js";
 import { scoreBenchmarkAnswer } from "./benchmark-scoring.js";
 import { buildBenchmarkCaseEvidence } from "./benchmark-case-evidence.js";
+import { summarizeBenchmarkEvidence } from "./benchmark-evidence-summary.js";
 import { normalizeBenchmarkCases } from "./benchmark-case-schema.js";
 import { compareBenchmarkResults } from "./benchmark-comparison.js";
 import { createExperimentFingerprint } from "./experiment-fingerprint.js";
@@ -291,6 +292,7 @@ export async function handleEngineRequest(request, env) {
       const qualityCases = results.filter(x => x.category === "quality");
       const safetyCases = results.filter(x => x.category === "safety");
       const comparison = compareBenchmarkResults(results);
+      const benchmarkSummary = summarizeBenchmarkEvidence(results);
       const quality = comparison.candidate_quality_score;
       const baseline = comparison.baseline_quality_score;
       const safety = safetyCases.filter(x => x.safety_passed).length / safetyCases.length;
@@ -343,6 +345,7 @@ export async function handleEngineRequest(request, env) {
         regression_count: regressions,
         test_count: results.length,
         comparison,
+        benchmark_summary: benchmarkSummary,
         evaluation_stages: evaluationStages
       };
       const summary = passed
@@ -359,7 +362,7 @@ export async function handleEngineRequest(request, env) {
         }, "return=minimal");
       }
       return json({
-        success: true, passed, metrics, comparison, evaluation_stages: evaluationStages, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, evidence_integrity: evidenceIntegrity, self_declaration: selfDeclaration, self_assessment: selfAssessment,
+        success: true, passed, metrics, comparison, benchmark_summary: benchmarkSummary, evaluation_stages: evaluationStages, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, evidence_integrity: evidenceIntegrity, self_declaration: selfDeclaration, self_assessment: selfAssessment,
         evaluation: Array.isArray(rows) ? rows[0] : rows,
         next_step: passed ? "Human admin review is required before approval." : "Improve the candidate and rerun the same benchmark suite.",
         governance: "The model may declare its own assessment, but only server-run benchmark evidence determines pass status. No automatic production deployment occurs."
