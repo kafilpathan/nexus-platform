@@ -13,6 +13,7 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
   const frontier = [{ id: startNodeId, depth: 0 }];
   const reached = [];
   const traversed = [];
+  const traversedEdgeKeys = new Set();
   while (frontier.length && reached.length < nodeLimit) {
     const current = frontier.shift();
     if (current.depth >= depthLimit) continue;
@@ -24,7 +25,13 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
       if (!(direction === "both" ? outgoing || incoming : direction === "incoming" ? incoming : outgoing)) continue;
       const nextId = outgoing ? edge.target_node_id : edge.source_node_id;
       if (typeof nextId !== "string") continue;
-      traversed.push(edge);
+      const edgeKey = typeof edge.id === "string" && edge.id
+        ? edge.id
+        : [edge.source_node_id, edge.target_node_id, edge.relation_type ?? ""].join("|");
+      if (!traversedEdgeKeys.has(edgeKey)) {
+        traversedEdgeKeys.add(edgeKey);
+        traversed.push(edge);
+      }
       if (visited.has(nextId)) continue;
       visited.add(nextId);
       const item = { id: nextId, depth: current.depth + 1, via_edge_id: edge.id ?? null, via_direction: outgoing ? "outgoing" : "incoming" };

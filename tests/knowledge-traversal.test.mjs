@@ -55,3 +55,13 @@ test("minimum confidence zero retains only edges with a numeric confidence", () 
 test("rejects invalid minimum confidence thresholds", () => {
   assert.throws(() => traverseKnowledgeGraph([], "root", 2, 50, { minConfidence: 1.1 }), TypeError);
 });
+
+test("both-direction traversal emits each edge only once", () => {
+  const edges = [
+    { id: "ab", source_node_id: "a", target_node_id: "b", relation_type: "supports" },
+    { id: "bc", source_node_id: "b", target_node_id: "c", relation_type: "supports" }
+  ];
+  const result = traverseKnowledgeGraph(edges, "a", 3, 10, { direction: "both" });
+  assert.deepEqual(result.edges.map(edge => edge.id), ["ab", "bc"]);
+  assert.equal(new Set(result.edges.map(edge => edge.id)).size, result.edges.length);
+});
