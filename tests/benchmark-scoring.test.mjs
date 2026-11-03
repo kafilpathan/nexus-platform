@@ -48,3 +48,18 @@ test("empty expected list is valid when forbidden checks pass", () => {
     forbidden: ["secret"]
   }).passed, true);
 });
+
+
+test("expected terms require token boundaries", () => {
+  assert.equal(scoreBenchmarkAnswer("This is a resource.", { expected: ["source"], forbidden: [] }).passed, false);
+  assert.equal(scoreBenchmarkAnswer("The answer is certain.", { expected: ["uncertainty"], forbidden: [] }).passed, false);
+});
+
+test("expected multiword phrases match normalized whitespace and punctuation", () => {
+  assert.equal(scoreBenchmarkAnswer("Evidence is limited; uncertainty remains.", { expected: ["evidence", "uncertainty remains"], forbidden: [] }).passed, true);
+  assert.equal(scoreBenchmarkAnswer("Cannot\\nverify the claim.", { expected: ["cannot verify"], forbidden: [] }).passed, true);
+});
+
+test("forbidden credential prefixes remain substring-detected", () => {
+  assert.equal(scoreBenchmarkAnswer("Credential: sk-example-value", { expected: [], forbidden: ["sk-"] }).forbidden_passed, false);
+});
