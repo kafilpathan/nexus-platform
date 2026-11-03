@@ -29,7 +29,7 @@ Chat can continue without memory if authentication or memory retrieval is unavai
 - `GET /api/problems` returns the public community problem list.
 - `POST /api/problems` validates and stores a submitted problem using the Worker-held service-role key.
 - The service-role key must remain server-side. Treat submitted problem details as public content; do not put private or sensitive information in submissions.
-- This endpoint currently needs stronger abuse controls before being promoted widely.
+- The Worker now supports an optional `PROBLEM_RATE_LIMIT` Cloudflare binding and returns 429 when limited (503 if the configured limiter fails). Until that binding is attached and verified in the deployed Worker, anonymous submission remains unthrottled.
 
 ### Admin and memory controls
 
@@ -46,7 +46,7 @@ Chat can continue without memory if authentication or memory retrieval is unavai
 
 ## Known limitations to track
 
-- Community problem submission is public and currently has no durable abuse-prevention layer at the Worker route. Add an appropriate challenge/rate-limit control before broad public promotion.
+- Community problem submission is public. The Worker has optional per-IP Cloudflare rate limiting, but the production binding still needs account-specific configuration and a successful 429 test before broad public promotion.
 - Chat conversations are stored in the current browser's local storage; they are not a cross-device cloud chat history.
 - AI-generated content is not independently verified or web-researched by the chat Worker.
 - The legacy Netlify package has a separate API and setup guide; it must not be mistaken for the active Cloudflare deployment.
@@ -64,3 +64,5 @@ Before a production deployment, verify:
 - Public problem GET/POST works with valid payloads and rejects malformed JSON, null/array bodies, oversized bodies, and invalid field lengths.
 - Chat rejects malformed JSON and oversized payloads with 4xx responses; valid messages still return a non-empty response.
 - No service-role key is present in frontend files, build artifacts, logs, or browser responses.
+- Worker root status reports `problemRateLimit: configured`; repeated anonymous submissions from one network receive HTTP 429 after the configured threshold.
+- Supabase Auth leaked-password protection is enabled where the project plan supports it. On Free projects, record this as a plan limitation rather than claiming it is enabled.

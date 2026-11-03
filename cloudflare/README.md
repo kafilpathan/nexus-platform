@@ -62,6 +62,34 @@ When memory is enabled, chat responses may include only fixed diagnostic labels 
 
 ## Public problem submission rate limiting
 
-The Worker supports an optional Cloudflare Rate Limiting binding named `PROBLEM_RATE_LIMIT`. Configure it on the `nexus-kaf-ai` Worker before promoting anonymous submissions. Suggested initial threshold: 5 requests per 60 seconds. The key uses the Cloudflare `CF-Connecting-IP` header. A limited request receives HTTP 429. If a configured limiter errors, the Worker fails closed with HTTP 503. If the binding is absent, the endpoint remains backward-compatible but is not rate limited; the root status endpoint reports `problemRateLimit: not_configured`. Cloudflare built-in limits are approximate and location-scoped. Do not describe public submission protection as active until the binding is configured and a 429 test succeeds.
+The Worker supports an optional Cloudflare Rate Limiting binding named `PROBLEM_RATE_LIMIT`. It is intentionally not assumed to exist until configured on the `nexus-kaf-ai` Worker. Suggested initial threshold: 5 requests per 60 seconds. The key uses the `CF-Connecting-IP` header because this endpoint currently accepts anonymous submissions; this can group users behind the same mobile carrier, school, office, or household connection. Cloudflare's built-in limiter is approximate and counters are separate per Cloudflare location, so it is an abuse-reduction control rather than a strict global quota. A limited request receives HTTP 429. If a configured limiter errors, the Worker fails closed with HTTP 503. If the binding is absent, the endpoint remains backward-compatible but is not rate limited; the root status endpoint reports `problemRateLimit: not_configured`.
 
-No repository merge or Pages deployment configures this binding automatically.
+### Cloudflare configuration
+
+Cloudflare's current Wrangler configuration uses the top-level `ratelimits` array. Merge this entry into the existing Worker configuration (do not replace existing AI bindings, variables, compatibility settings, or build settings):
+
+```jsonc
+{
+  "ratelimits": [
+    {
+      "name": "PROBLEM_RATE_LIMIT",
+      "namespace_id": "REPLACE_WITH_A_UNIQUE_POSITIVE_INTEGER_FOR_THIS_CLOUDFLARE_ACCOUNT",
+      "simple": { "limit": 5, "period": 60 }
+    }
+  ]
+}
+```
+
+The namespace ID must be a positive integer represented as a string and unique to the Cloudflare account for an independent counter. Choose/check it in the account's deployment configuration; do not copy an ID from another account. If this Worker is configured only through the Cloudflare dashboard, add the same binding under the Worker's Settings → Bindings → Rate limiting and set the variable name to `PROBLEM_RATE_LIMIT`, the unique namespace ID, 5 requests, and 60 seconds. If the current dashboard UI does not offer this binding, deploy the merged Wrangler configuration with Wrangler 4.36.0 or later.
+
+After deploying, call the Worker root endpoint and confirm `problemRateLimit` is `configured`. Then submit more than five valid test requests from the same network within 60 seconds and confirm a later request returns HTTP 429. Do not use real private data in test submissions. The binding is not active until both checks pass.
+
+### Deployment boundary
+
+A GitHub merge or Cloudflare Pages frontend deployment does not configure a Worker binding. The repository currently has no Cloudflare account-management connection, so the binding must be attached in the Cloudflare account or deployed from its Wrangler configuration. Never paste Cloudflare API tokens or Supabase secrets into chat or source control.
+
+## Supabase Auth password protection
+
+The connected Supabase project currently belongs to the Free plan. Supabase's built-in leaked-password protection (Have I Been Pwned Pwned Passwords check) is available on the Pro plan and above, so this setting cannot be enabled on the current plan. No plan upgrade or paid change is being made. If the project is upgraded later, enable it in Supabase Dashboard → Authentication → Password Security and rerun the Security Advisor. See https://supabase.com/docs/guides/auth/password-security.
+
+The Security Advisor currently reports this as a warning, not a database migration issue. Do not try to imitate this control by sending raw passwords from the browser or Worker to a third-party service.
