@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import workerModule from "../cloudflare/worker.js";
-
-const worker = workerModule.default;
+import worker from "../cloudflare/worker.js";
 
 function aiBinding() {
   let calls = 0;
