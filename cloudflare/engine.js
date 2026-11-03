@@ -143,7 +143,7 @@ export async function handleEngineRequest(request, env) {
     }
 
     if (route === "knowledge/contradictions" && request.method === "GET") {
-      const edges = await rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&relation_type=ilike.contradicts&order=created_at.desc&limit=100");
+      const edges = await rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&relation_type=ilike.contradicts&order=created_at.desc,id.desc&limit=100");
       const queue = buildContradictionReviewQueue(edges);
       return json({
         success: true,
