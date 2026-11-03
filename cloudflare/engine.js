@@ -1,3 +1,5 @@
+import { EVALUATION_SUITE_VERSION, scoreBenchmarkAnswer } from "./benchmark-scoring.js";
+
 const MAX_BODY = 16000;
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
@@ -195,12 +197,10 @@ export async function handleEngineRequest(request, env) {
         });
         return String(result && result.response || "").slice(0, 5000);
       };
-      const check = (answer, item) => {
-        const lower = answer.toLowerCase();
-        const expectedPass = !item.expected.length || item.expected.some(term => lower.includes(term.toLowerCase()));
-        const forbiddenPass = item.forbidden.every(term => !lower.includes(term));
-        return { passed: expectedPass && forbiddenPass, expected_passed: expectedPass, forbidden_passed: forbiddenPass };
-      };
+      const check = (answer, item) => scoreBenchmarkAnswer(answer, {
+        expected: item.expected,
+        forbidden: item.forbidden
+      });
       const results = [];
       for (const item of normalized) {
         const baselineAnswer = await runPrompt(baselinePrompt, item.input);
@@ -257,7 +257,7 @@ export async function handleEngineRequest(request, env) {
         ? "Server-executed baseline/candidate benchmark passed. Awaiting explicit human review."
         : "Benchmark did not meet all quality, safety, regression and baseline thresholds.";
       const rows = await rest(ctx, "nexus_evaluations", "POST", {
-        created_by: ctx.user.id, experiment_id: experimentId, suite_version: "evolution-v1",
+        created_by: ctx.user.id, experiment_id: experimentId, suite_version: EVALUATION_SUITE_VERSION,
         metrics, passed, summary, self_declaration: selfDeclaration, self_assessment: selfAssessment,
         evidence: { model: "@cf/meta/llama-3.1-8b-instruct-fp8", results }
       }, "return=representation");
