@@ -184,3 +184,20 @@ test("verification route rejects a malformed evaluation identifier", async () =>
     assert.equal(mock.calls.some(call => call.url.includes("/rest/v1/nexus_evaluations")), false);
   } finally { mock.restore(); }
 });
+
+test("evidence verification returns not found for a valid but unknown ID", async () => {
+  const mock = mockSupabase([]);
+  try {
+    const request = new Request("https://nexus.test/api/engine/evaluations/123e4567-e89b-42d3-a456-426614174098/verify", {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 404);
+    assert.equal(mock.calls.some(call => call.url.includes("/rest/v1/nexus_evaluations")), true);
+  } finally {
+    mock.restore();
+  }
+});
