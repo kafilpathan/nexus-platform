@@ -1646,14 +1646,15 @@ status.setAttribute("aria-label", "Problem status");
 <div id="kafai-tools" class="kafai-toolbar">
 <select id="kafai-history" aria-label="Saved conversations"></select>
 <button type="button" id="kafai-new">＋ New</button>
+ <button type="button" id="kafai-delete" aria-label="Delete selected conversation">Delete</button>
 </div>
 <div id="kafai-messages" aria-live="polite"></div>
 <div id="kafai-note">Chats are saved only in this browser on this device.</div>
 
 <div id="kafai-research-status" aria-live="polite" style="padding:9px 12px;border-top:1px solid #29344a;color:#b8c6dc;font-size:11px">Research sources and answer evaluation will appear here.</div>
-<label id="kafai-memory-toggle" style="display:flex;align-items:center;gap:7px;padding:0 12px 8px;color:#b8c6dc;font-size:11px">
- <input type="checkbox" id="kafai-use-memory" checked>
- Use my saved NEXUS memories when signed in
+<label id="kafai-memory-toggle" style="display:flex;align-items:flex-start;gap:7px;padding:0 12px 8px;color:#b8c6dc;font-size:11px">
+ <input type="checkbox" id="kafai-use-memory">
+ <span>Optional: use my saved NEXUS memories in chat. When enabled, eligible NEXUS project messages may also be saved automatically (admin account required). You can review or delete saved items in Memory Core. Leave unchecked to keep memory off.</span>
 </label>
 <form id="kafai-form">
 <input id="kafai-input" placeholder="Message KAF-AI..." maxlength="4000" autocomplete="off" required>
@@ -1804,7 +1805,7 @@ status.setAttribute("aria-label", "Problem status");
 
  async function saveExchange(chat, userText, assistantText, assistantItem) {
   const sourceText = String(userText || "").trim();
-  const projectSignal = /\b(nexus|kaf[\s-]?ai|memory core|cloudflare worker|supabase|project)\b/i;
+  const projectSignal = /\b(nexus|kaf[\s-]?ai|memory core|cloudflare worker|supabase)\b/i;
   const sensitiveSignal = /\b(password|passcode|otp|one[- ]time code|secret|api[- ]?key|access token|refresh token|bank account|account number|card number|cvv|aadhaar|pan number|home address|phone number|medical report|diagnosis)\b/i;
   if (!projectSignal.test(sourceText) || sensitiveSignal.test(sourceText)) return false;
   const db = window.nexusSupabaseClient;
@@ -1911,7 +1912,7 @@ status.setAttribute("aria-label", "Problem status");
    const response = await fetch(API_URL, {
     method: "POST",
     headers: requestHeaders,
-    body: JSON.stringify({ message, messages: context, useMemory: Boolean(accessToken) })
+    body: JSON.stringify({ message, messages: context, useMemory: Boolean(document.getElementById("kafai-use-memory")?.checked) })
    });
    let data;
    try { data = await response.json(); }
