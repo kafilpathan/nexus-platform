@@ -17,3 +17,19 @@ test("queue handles empty input and rejects non-array input", () => {
   assert.deepEqual(buildContradictionReviewQueue([]), []);
   assert.throws(() => buildContradictionReviewQueue(null), TypeError);
 });
+
+test("prioritizes higher-confidence contradictions and labels confidence bands", () => {
+  const queue = buildContradictionReviewQueue([
+    { id: "low", relation_type: "contradicts", confidence: 0.2 },
+    { id: "high", relation_type: "contradicts", confidence: 0.95 },
+    { id: "medium", relation_type: "contradicts", confidence: 0.6 },
+    { id: "unknown", relation_type: "contradicts", confidence: null }
+  ]);
+  assert.deepEqual(queue.map(item => item.id), ["high", "medium", "low", "unknown"]);
+  assert.deepEqual(queue.map(item => item.confidence_band), ["high", "medium", "low", "unknown"]);
+});
+test("invalid confidence is marked unknown instead of treated as zero", () => {
+  const [item] = buildContradictionReviewQueue([{ id: "bad", relation_type: "contradicts", confidence: 4 }]);
+  assert.equal(item.confidence, null);
+  assert.equal(item.confidence_band, "unknown");
+});
