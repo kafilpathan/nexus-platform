@@ -1795,7 +1795,8 @@ status.setAttribute("aria-label", "Problem status");
    const stage = typeof memory.stage === "string" && memory.stage !== "none" ? " · " + memory.stage : "";
    const httpStatus = Number.isInteger(Number(memory.httpStatus)) && Number(memory.httpStatus) > 0
     ? " · HTTP " + Number(memory.httpStatus) : "";
-   memoryBadge.textContent = "Memory: " + memory.status + stage + httpStatus + " · " + (Number(memory.count) || 0) + " match(es)";
+   const saveStatus = typeof memory.saveStatus === "string" ? " · save " + memory.saveStatus : "";
+    memoryBadge.textContent = "Memory: " + memory.status + stage + httpStatus + " · " + (Number(memory.count) || 0) + " match(es)" + saveStatus;
    bubble.appendChild(memoryBadge);
   }
   messagesEl.appendChild(bubble);
@@ -1872,6 +1873,21 @@ status.setAttribute("aria-label", "Problem status");
  document.getElementById("kafai-hero-open")?.addEventListener("click", openKafAI);
  document.getElementById("kafai-close").onclick = () => panel.classList.remove("open");
  document.getElementById("kafai-new").onclick = createChat;
+  document.getElementById("kafai-delete").onclick = () => {
+   const chat = activeChat();
+   if (!chat) return;
+   if (!window.confirm("Delete this conversation from this device? This cannot be undone.")) return;
+   chats = chats.filter(item => item.id !== chat.id);
+   activeId = "";
+   persist();
+   if (chats.length) {
+    activeId = [...chats].sort((a,b) => b.updatedAt - a.updatedAt)[0].id;
+    persist();
+    render();
+   } else {
+    createChat();
+   }
+  };
  historySelect.onchange = () => {
   activeId = historySelect.value;
   persist();
