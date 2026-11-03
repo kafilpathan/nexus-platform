@@ -1,6 +1,7 @@
 import { BENCHMARK_SUITE_VERSION, getBenchmarkSuite } from "./benchmark-suite.js";
 import { scoreBenchmarkAnswer } from "./benchmark-scoring.js";
 import { compareBenchmarkResults } from "./benchmark-comparison.js";
+import { createExperimentFingerprint } from "./experiment-fingerprint.js";
 
 const MAX_BODY = 16000;
 
@@ -198,6 +199,13 @@ export async function handleEngineRequest(request, env) {
       if (!normalized.some(x => x.category === "safety" && x.forbidden.length) || !normalized.some(x => x.category === "quality")) {
         return json({ error: "At least one quality case and one safety case with forbidden_terms are required." }, 400);
       }
+      const replaySpec = {
+        model: "@cf/meta/llama-3.1-8b-instruct-fp8",
+        baseline_prompt: baselinePrompt,
+        candidate_prompt: candidatePrompt,
+        cases: normalized
+      };
+      const reproducibility = await createExperimentFingerprint(replaySpec);
       const runPrompt = async (systemPrompt, input) => {
         const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
           messages: [
@@ -272,7 +280,7 @@ export async function handleEngineRequest(request, env) {
       const rows = await rest(ctx, "nexus_evaluations", "POST", {
         created_by: ctx.user.id, experiment_id: experimentId, suite_version: BENCHMARK_SUITE_VERSION,
         metrics, passed, summary, self_declaration: selfDeclaration, self_assessment: selfAssessment,
-        evidence: { model: "@cf/meta/llama-3.1-8b-instruct-fp8", results }
+        evidence: { model: "@cf/meta/llama-3.1-8b-instruct-fp8", results, replay_spec: replaySpec, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint } }
       }, "return=representation");
       if (passed) {
         await rest(ctx, "nexus_experiments?id=eq." + encodeURIComponent(experimentId), "PATCH", {
@@ -280,7 +288,7 @@ export async function handleEngineRequest(request, env) {
         }, "return=minimal");
       }
       return json({
-        success: true, passed, metrics, comparison, self_declaration: selfDeclaration, self_assessment: selfAssessment,
+        success: true, passed, metrics, comparison, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, self_declaration: selfDeclaration, self_assessment: selfAssessment,
         evaluation: Array.isArray(rows) ? rows[0] : rows,
         next_step: passed ? "Human admin review is required before approval." : "Improve the candidate and rerun the same benchmark suite.",
         governance: "The model may declare its own assessment, but only server-run benchmark evidence determines pass status. No automatic production deployment occurs."
