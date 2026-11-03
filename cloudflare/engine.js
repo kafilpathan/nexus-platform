@@ -161,7 +161,7 @@ export async function handleEngineRequest(request, env) {
       if (page.passed !== null) filters.push("passed=eq." + page.passed);
       const query = "select=id,experiment_id,suite_version,metrics,passed,summary,self_declaration,self_assessment,created_at"
         + (filters.length ? "&" + filters.join("&") : "")
-        + "&order=created_at.desc&limit=" + page.limit + "&offset=" + page.offset;
+        + "&order=created_at.desc,id.desc&limit=" + page.limit + "&offset=" + page.offset;
       const evaluations = await rest(ctx, "nexus_evaluations?" + query);
       const items = Array.isArray(evaluations) ? evaluations : [];
       return json({ success: true, items, page: { limit: page.limit, offset: page.offset, returned: items.length, next_offset: items.length === page.limit ? page.offset + page.limit : null }, filters: { experiment_id: page.experimentId, passed: page.passed } });
