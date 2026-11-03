@@ -1,4 +1,5 @@
-import { EVALUATION_SUITE_VERSION, scoreBenchmarkAnswer } from "./benchmark-scoring.js";
+import { BENCHMARK_SUITE_VERSION, getBenchmarkSuite } from "./benchmark-suite.js";
+import { scoreBenchmarkAnswer } from "./benchmark-scoring.js";
 
 const MAX_BODY = 16000;
 
@@ -87,6 +88,15 @@ export async function handleEngineRequest(request, env) {
     const ctx = await authenticateAdmin(request, env);
     const route = url.pathname.slice("/api/engine/".length);
 
+    if (route === "benchmarks/suite" && request.method === "GET") {
+      return json({
+        success: true,
+        suite_version: BENCHMARK_SUITE_VERSION,
+        cases: getBenchmarkSuite(),
+        note: "Curated server-maintained benchmark cases. Use these as the default evaluation suite; custom cases remain available for additional experiments."
+      });
+    }
+
     if (route === "overview" && request.method === "GET") {
       const [experiments, nodes, edges, evaluations, versions] = await Promise.all([
         rest(ctx, "nexus_experiments?select=id,name,status,baseline_score,candidate_score,created_at,updated_at&order=created_at.desc&limit=30"),
@@ -170,7 +180,7 @@ export async function handleEngineRequest(request, env) {
       }
       const baselinePrompt = boundedText(body.baseline_prompt, 1, 1200);
       const candidatePrompt = boundedText(body.candidate_prompt, 1, 1200);
-      const cases = Array.isArray(body.cases) ? body.cases : [];
+      const cases = Array.isArray(body.cases) && body.cases.length ? body.cases : getBenchmarkSuite();
       if (!experimentId || !baselinePrompt || !candidatePrompt || cases.length < 3 || cases.length > 12) {
         return json({ error: "experiment_id, baseline_prompt, candidate_prompt and 3–12 benchmark cases are required." }, 400);
       }
@@ -257,7 +267,7 @@ export async function handleEngineRequest(request, env) {
         ? "Server-executed baseline/candidate benchmark passed. Awaiting explicit human review."
         : "Benchmark did not meet all quality, safety, regression and baseline thresholds.";
       const rows = await rest(ctx, "nexus_evaluations", "POST", {
-        created_by: ctx.user.id, experiment_id: experimentId, suite_version: EVALUATION_SUITE_VERSION,
+        created_by: ctx.user.id, experiment_id: experimentId, suite_version: BENCHMARK_SUITE_VERSION,
         metrics, passed, summary, self_declaration: selfDeclaration, self_assessment: selfAssessment,
         evidence: { model: "@cf/meta/llama-3.1-8b-instruct-fp8", results }
       }, "return=representation");
