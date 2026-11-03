@@ -147,3 +147,28 @@ test("evidence verification endpoint identifies tampered case IDs", async () => 
     mock.restore();
   }
 });
+
+test("knowledge edge route rejects malformed provenance before database writes", async () => {
+  const mock = mockSupabase([]);
+  try {
+    const request = new Request("https://nexus.test/api/engine/knowledge/edges", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-session", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source_node_id: "123e4567-e89b-42d3-a456-426614174000",
+        target_node_id: "123e4567-e89b-42d3-a456-426614174001",
+        relation_type: "supports",
+        confidence: 0.8,
+        provenance: { content_sha256: "bad-digest" }
+      })
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 400);
+    assert.equal(mock.calls.some(call => call.url.includes("/rest/v1/nexus_knowledge_edges")), false);
+  } finally {
+    mock.restore();
+  }
+});
