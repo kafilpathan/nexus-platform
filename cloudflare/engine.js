@@ -86,11 +86,12 @@ export async function handleEngineRequest(request, env) {
     const route = url.pathname.slice("/api/engine/".length);
 
     if (route === "overview" && request.method === "GET") {
-      const [experiments, nodes, edges, evaluations] = await Promise.all([
+      const [experiments, nodes, edges, evaluations, versions] = await Promise.all([
         rest(ctx, "nexus_experiments?select=id,name,status,baseline_score,candidate_score,created_at,updated_at&order=created_at.desc&limit=30"),
         rest(ctx, "nexus_knowledge_nodes?select=id,label,node_type,description,confidence,source_url,source_title,created_at&order=created_at.desc&limit=50"),
         rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc&limit=100"),
-        rest(ctx, "nexus_evaluations?select=id,experiment_id,suite_version,metrics,passed,summary,created_at&order=created_at.desc&limit=30")
+        rest(ctx, "nexus_evaluations?select=id,experiment_id,suite_version,metrics,passed,summary,self_declaration,self_assessment,created_at&order=created_at.desc&limit=30"),
+        rest(ctx, "nexus_evolution_versions?select=id,experiment_id,evaluation_id,version_label,change_summary,status,rollback_of,created_at,approved_at&order=created_at.desc&limit=30")
       ]);
       return json({
         success: true,
@@ -102,10 +103,12 @@ export async function handleEngineRequest(request, env) {
           knowledgeNodes: nodes.length,
           knowledgeEdges: edges.length,
           evaluations: evaluations.length,
-          passedEvaluations: evaluations.filter(x => x.passed).length
+          passedEvaluations: evaluations.filter(x => x.passed).length,
+          versions: versions.length,
+          contradictions: edges.filter(x => x.relation_type === "contradicts").length
         },
-        experiments, nodes, edges, evaluations,
-        governance: "Experiments remain proposals until an authenticated admin reviews and approves them. Evaluation metrics are submitted test results, not proof of model capability."
+        experiments, nodes, edges, evaluations, versions,
+        governance: "Self-declarations are recorded separately. Only server-run benchmark evidence determines evaluation pass status; human approval is required before an experiment is approved. No automatic production deployment occurs."
       });
     }
 
