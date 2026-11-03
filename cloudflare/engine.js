@@ -10,7 +10,7 @@ import { normalizeSourceProvenance } from "./source-provenance.js";
 import { findDuplicateKnowledgeNode } from "./knowledge-node-integrity.js";
 import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
-import { validateKnowledgeEdge } from "./knowledge-edge-integrity.js";
+import { validateKnowledgeEdge, normalizeKnowledgeEdgeProvenance } from "./knowledge-edge-integrity.js";
 import { evaluateEvaluationStages } from "./evaluation-stages.js";
 import { createEvidenceIntegrityManifest, verifyEvidenceIntegrityManifest, createPerCaseIntegrityManifests, verifyPerCaseIntegrityManifests } from "./evidence-integrity.js";
 
@@ -266,6 +266,12 @@ export async function handleEngineRequest(request, env) {
       const candidate = validateKnowledgeEdge(body);
       if (!candidate.valid) return json({ error: candidate.error }, candidate.duplicate ? 409 : 400);
       const { source_node_id: source, target_node_id: target, relation_type: relation, confidence } = candidate.edge;
+      let edgeProvenance;
+      try {
+        edgeProvenance = normalizeKnowledgeEdgeProvenance(body.provenance);
+      } catch (error) {
+        return json({ error: error.message }, 400);
+      }
       const nodeRows = await rest(ctx, "nexus_knowledge_nodes?id=in.(" + encodeURIComponent(source) + "," + encodeURIComponent(target) + ")&select=id&limit=2");
       if (!Array.isArray(nodeRows) || nodeRows.length !== 2) return json({ error: "Both source and target knowledge nodes must exist." }, 404);
       const existing = await rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type&source_node_id=eq." + encodeURIComponent(source) + "&target_node_id=eq." + encodeURIComponent(target) + "&limit=100");
@@ -273,7 +279,7 @@ export async function handleEngineRequest(request, env) {
       if (!checked.valid) return json({ error: checked.error }, checked.duplicate ? 409 : 400);
       const rows = await rest(ctx, "nexus_knowledge_edges", "POST", {
         created_by: ctx.user.id, source_node_id: source, target_node_id: target,
-        relation_type: relation, confidence, provenance: safeObject(body.provenance)
+        relation_type: relation, confidence, provenance: edgeProvenance
       }, "return=representation");
       return json({ success: true, edge: Array.isArray(rows) ? rows[0] : rows }, 201);
     }
