@@ -182,21 +182,22 @@ export async function handleEngineRequest(request, env) {
         reproducibility_fingerprint: safeObject(evidence.reproducibility).fingerprint,
         results: evidence.results
       };
-      const verified = await verifyEvidenceIntegrityManifest(payload, manifest);
+      const aggregateVerified = await verifyEvidenceIntegrityManifest(payload, manifest);
       const perCaseIntegrity = evidence.per_case_integrity
         ? await verifyPerCaseIntegrityManifests(evidence.results, evidence.per_case_integrity)
         : null;
+      const verified = aggregateVerified && (perCaseIntegrity === null || perCaseIntegrity.verified);
       return json({
         success: true,
         evaluation_id: evaluation.id,
-        verified: verified && (perCaseIntegrity === null || perCaseIntegrity.verified),
+        verified,
         per_case_integrity: perCaseIntegrity,
         algorithm: manifest.algorithm,
         canonicalization: manifest.canonicalization,
         expected_sha256: manifest.sha256,
         byte_length: manifest.byte_length,
         checked_at: new Date().toISOString(),
-        reason: verified ? null : "Stored evaluation evidence does not match its integrity manifest."
+        reason: verified ? null : "Stored evaluation evidence does not match its aggregate or per-case integrity manifest."
       });
     }
 
