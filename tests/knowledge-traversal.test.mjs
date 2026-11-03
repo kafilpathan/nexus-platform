@@ -65,3 +65,15 @@ test("both-direction traversal emits each edge only once", () => {
   assert.deepEqual(result.edges.map(edge => edge.id), ["ab", "bc"]);
   assert.equal(new Set(result.edges.map(edge => edge.id)).size, result.edges.length);
 });
+
+test("indexed traversal preserves breadth-first order with disconnected edges", () => {
+  const edges = [
+    { id: "ab", source_node_id: "a", target_node_id: "b", relation_type: "supports" },
+    { id: "xy", source_node_id: "x", target_node_id: "y", relation_type: "supports" },
+    { id: "bc", source_node_id: "b", target_node_id: "c", relation_type: "supports" },
+    { id: "ad", source_node_id: "a", target_node_id: "d", relation_type: "supports" }
+  ];
+  const result = traverseKnowledgeGraph(edges, "a", 2, 10);
+  assert.deepEqual(result.nodes.map(node => node.id), ["b", "d", "c"]);
+  assert.deepEqual(result.edges.map(edge => edge.id), ["ab", "ad", "bc"]);
+});
