@@ -77,3 +77,13 @@ test("indexed traversal preserves breadth-first order with disconnected edges", 
   assert.deepEqual(result.nodes.map(node => node.id), ["b", "d", "c"]);
   assert.deepEqual(result.edges.map(edge => edge.id), ["ab", "ad", "bc"]);
 });
+
+test("minimum confidence excludes null and empty-string edge confidence", () => {
+  const edges = [
+    { id: "null", source_node_id: "root", target_node_id: "null-node", confidence: null },
+    { id: "empty", source_node_id: "root", target_node_id: "empty-node", confidence: "" },
+    { id: "zero", source_node_id: "root", target_node_id: "zero-node", confidence: 0 }
+  ];
+  const result = traverseKnowledgeGraph(edges, "root", 1, 10, { minConfidence: 0 });
+  assert.deepEqual(result.nodes.map(node => node.id), ["zero-node"]);
+});

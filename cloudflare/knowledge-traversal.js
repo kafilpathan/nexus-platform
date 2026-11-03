@@ -16,7 +16,7 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
   };
   for (const edge of edges) {
     if (!edge || (relation && String(edge.relation_type).toLowerCase() !== relation)) continue;
-    if (minConfidence !== null && (!Number.isFinite(Number(edge.confidence)) || Number(edge.confidence) < minConfidence)) continue;
+    if (minConfidence !== null && (edge.confidence == null || edge.confidence === "" || !Number.isFinite(Number(edge.confidence)) || Number(edge.confidence) < minConfidence)) continue;
     if ((direction === "outgoing" || direction === "both") && typeof edge.source_node_id === "string" && typeof edge.target_node_id === "string") {
       addNeighbor(edge.source_node_id, { edge, nextId: edge.target_node_id, viaDirection: "outgoing" });
     }
