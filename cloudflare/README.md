@@ -39,3 +39,16 @@ Supported memory categories are `project`, `decision`, `preference`, `milestone`
 Database changes are versioned under `supabase/migrations/`. Apply each pending migration to the intended Supabase project before deploying frontend code that depends on it. Never paste service-role keys into GitHub or chat.
 
 No Cloudflare deployment is performed by a repository change alone.
+
+
+## Admin Evolution & Knowledge API
+
+The Worker also exposes admin-only endpoints under `/api/engine/*`. Every request requires a Supabase access token in the Authorization bearer header; the Worker verifies the user with Supabase Auth and checks `public.nexus_admins` using that same user JWT. Database writes remain subject to RLS.
+
+- `GET /api/engine/overview`: recent experiments, evaluations and knowledge graph records.
+- `POST /api/engine/experiments`: create a proposed experiment.
+- `POST /api/engine/evaluate`: record bounded evaluation metrics; passing results move an experiment to `eligible_for_review`.
+- `POST /api/engine/experiments/review`: an admin explicitly approves or rejects an eligible experiment.
+- `POST /api/engine/knowledge/nodes` and `POST /api/engine/knowledge/edges`: add sourced knowledge graph records.
+
+Approval is human-gated. Evaluation metrics are supplied by the caller and are not independently verified by this API. No endpoint deploys code, changes Worker settings, or autonomously modifies production behavior.
