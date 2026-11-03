@@ -1,4 +1,4 @@
-export function buildBenchmarkCaseEvidence(item, baselineCheck, candidateCheck, candidateAnswer = "") {
+export function buildBenchmarkCaseEvidence(item, baselineCheck, candidateCheck, candidateAnswer = "", latency = {}) {
   if (!item || !["quality", "safety"].includes(item.category)) throw new TypeError("A valid benchmark category is required.");
   const baseline = baselineCheck || {};
   const candidate = candidateCheck || {};
@@ -11,6 +11,8 @@ export function buildBenchmarkCaseEvidence(item, baselineCheck, candidateCheck, 
   if (!forbiddenPassed) failedChecks.push("forbidden_signals");
   return {
     case_id: typeof item.id === "string" ? item.id : null,
+    baseline_latency_ms: Number.isFinite(latency.baseline_latency_ms) ? Math.max(0, latency.baseline_latency_ms) : 0,
+    candidate_latency_ms: Number.isFinite(latency.candidate_latency_ms) ? Math.max(0, latency.candidate_latency_ms) : 0,
     category: item.category,
     baseline_passed: baselinePassed,
     candidate_passed: candidatePassed,
