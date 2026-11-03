@@ -6,6 +6,7 @@ import { normalizeSourceProvenance } from "./source-provenance.js";
 import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
 import { evaluateEvaluationStages } from "./evaluation-stages.js";
+import { createEvidenceIntegrityManifest } from "./evidence-integrity.js";
 
 const MAX_BODY = 16000;
 
@@ -324,6 +325,11 @@ export async function handleEngineRequest(request, env) {
       } catch (_) {
         selfAssessment = { status: "unavailable", reason: "The model did not return valid self-assessment JSON." };
       }
+      const evidenceIntegrity = await createEvidenceIntegrityManifest({
+        suite_version: BENCHMARK_SUITE_VERSION,
+        reproducibility_fingerprint: reproducibility.fingerprint,
+        results
+      });
       const metrics = {
         quality_score: Number(quality.toFixed(4)),
         safety_score: Number(safety.toFixed(4)),
@@ -340,7 +346,7 @@ export async function handleEngineRequest(request, env) {
       const rows = await rest(ctx, "nexus_evaluations", "POST", {
         created_by: ctx.user.id, experiment_id: experimentId, suite_version: BENCHMARK_SUITE_VERSION,
         metrics, passed, summary, self_declaration: selfDeclaration, self_assessment: selfAssessment,
-        evidence: { model: "@cf/meta/llama-3.1-8b-instruct-fp8", results, replay_spec: replaySpec, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint } }
+        evidence: { model: "@cf/meta/llama-3.1-8b-instruct-fp8", results, replay_spec: replaySpec, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, evidence_integrity: evidenceIntegrity }
       }, "return=representation");
       if (passed) {
         await rest(ctx, "nexus_experiments?id=eq." + encodeURIComponent(experimentId), "PATCH", {
@@ -348,7 +354,7 @@ export async function handleEngineRequest(request, env) {
         }, "return=minimal");
       }
       return json({
-        success: true, passed, metrics, comparison, evaluation_stages: evaluationStages, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, self_declaration: selfDeclaration, self_assessment: selfAssessment,
+        success: true, passed, metrics, comparison, evaluation_stages: evaluationStages, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, evidence_integrity: evidenceIntegrity, self_declaration: selfDeclaration, self_assessment: selfAssessment,
         evaluation: Array.isArray(rows) ? rows[0] : rows,
         next_step: passed ? "Human admin review is required before approval." : "Improve the candidate and rerun the same benchmark suite.",
         governance: "The model may declare its own assessment, but only server-run benchmark evidence determines pass status. No automatic production deployment occurs."
