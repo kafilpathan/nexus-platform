@@ -1,3 +1,4 @@
+// Node identity is considered duplicate by source URL or normalized label/type.
 export function findDuplicateKnowledgeNode(candidate, existingNodes = []) {
   if (!candidate || typeof candidate !== "object" || !Array.isArray(existingNodes)) return null;
   const label = String(candidate.label || "").trim().toLowerCase();
