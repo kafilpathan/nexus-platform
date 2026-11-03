@@ -162,6 +162,10 @@ export async function handleEngineRequest(request, env) {
     if (route === "evaluate" && request.method === "POST") {
       const body = await readBody(request);
       const experimentId = boundedText(body.experiment_id, 36, 36);
+      const experimentRows = await rest(ctx, "nexus_experiments?id=eq." + encodeURIComponent(experimentId || "") + "&select=id,status&limit=1");
+      if (!experimentId || !Array.isArray(experimentRows) || !experimentRows.length || experimentRows[0].status !== "proposed") {
+        return json({ error: "A valid proposed experiment is required before evaluation." }, 409);
+      }
       const baselinePrompt = boundedText(body.baseline_prompt, 1, 1200);
       const candidatePrompt = boundedText(body.candidate_prompt, 1, 1200);
       const cases = Array.isArray(body.cases) ? body.cases : [];
