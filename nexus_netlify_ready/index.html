@@ -1240,6 +1240,12 @@ document.getElementById('copySubmission').addEventListener('click', async functi
  <label for="nexusNodeUrl">HTTPS source URL (optional)</label><input id="nexusNodeUrl" type="url" maxlength="2000">
  <button type="button" id="nexusEngineAddNode">Add knowledge node</button>
  <h4>Knowledge nodes</h4><div id="nexusEngineNodes"></div>
+ <h4>Connect two knowledge nodes</h4>
+ <label for="nexusEdgeSource">Source node UUID</label><input id="nexusEdgeSource" maxlength="36">
+ <label for="nexusEdgeTarget">Target node UUID</label><input id="nexusEdgeTarget" maxlength="36">
+ <label for="nexusEdgeRelation">Relationship</label><input id="nexusEdgeRelation" maxlength="60" placeholder="depends_on, supports, improves…">
+ <button type="button" id="nexusEngineAddEdge">Create knowledge link</button>
+ <h4>Knowledge links</h4><div id="nexusEngineEdges"></div>
 </section>
 </section>
 <p id="nexusAdminMsg" role="status"></p>
@@ -1356,7 +1362,7 @@ status.setAttribute("aria-label", "Problem status");
  const $=id=>document.getElementById(id);
  const status=$("nexusEngineStatus");
  const experiments=$("nexusEngineExperiments");
- const nodes=$("nexusEngineNodes");
+ const nodes=$("nexusEngineNodes");const edges=$("nexusEngineEdges");
  let sessionToken=null;
  async function token(){
   const db=window.nexusSupabaseClient;
@@ -1391,9 +1397,10 @@ status.setAttribute("aria-label", "Problem status");
     card.append(use);experiments.append(card);
    });
    nodes.replaceChildren();
+   edges.replaceChildren();(data.edges||[]).forEach(item=>{const card=text("article",item.relation_type+" · confidence "+item.confidence);card.className="nexus-admin-item";card.append(text("small",item.source_node_id+" → "+item.target_node_id));edges.append(card);});
    (data.nodes||[]).forEach(item=>{
     const card=text("article",item.label+" · "+item.node_type+" · confidence "+item.confidence);
-    card.className="nexus-admin-item";card.append(text("p",item.description));
+    card.className="nexus-admin-item";card.append(text("p",item.description),text("small","ID: "+item.id));
     if(item.source_url){const link=text("a",item.source_title||item.source_url);link.href=item.source_url;link.target="_blank";link.rel="noopener noreferrer";card.append(link);}
     nodes.append(card);
    });
@@ -1419,6 +1426,11 @@ status.setAttribute("aria-label", "Problem status");
   const label=$("nexusNodeLabel").value.trim(),node_type=$("nexusNodeType").value.trim(),description=$("nexusNodeDescription").value.trim(),source_url=$("nexusNodeUrl").value.trim()||null;
   try{await call("knowledge/nodes","POST",{label,node_type,description,source_url,confidence:0.7,provenance:{created_via:"admin-dashboard"}});$("nexusNodeLabel").value="";$("nexusNodeType").value="";$("nexusNodeDescription").value="";$("nexusNodeUrl").value="";status.textContent="Knowledge node added.";await refresh();}
   catch(error){status.textContent="Could not add node: "+error.message;}
+ };
+ $("nexusEngineAddEdge").onclick=async()=>{
+  const source_node_id=$("nexusEdgeSource").value.trim(),target_node_id=$("nexusEdgeTarget").value.trim(),relation_type=$("nexusEdgeRelation").value.trim();
+  try{await call("knowledge/edges","POST",{source_node_id,target_node_id,relation_type,confidence:0.7,provenance:{created_via:"admin-dashboard"}});status.textContent="Knowledge link created.";await refresh();}
+  catch(error){status.textContent="Could not create link: "+error.message;}
  };
  const db=window.nexusSupabaseClient;
  if(db)db.auth.onAuthStateChange(event=>{if(event==="SIGNED_IN")Promise.resolve().then(refresh);});
