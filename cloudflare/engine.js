@@ -1,4 +1,5 @@
 import { BENCHMARK_SUITE_VERSION, getBenchmarkSuite } from "./benchmark-suite.js";
+import { parseEvaluationPagination } from "./evaluation-pagination.js";
 import { scoreBenchmarkAnswer } from "./benchmark-scoring.js";
 import { buildBenchmarkCaseEvidence } from "./benchmark-case-evidence.js";
 import { summarizeBenchmarkEvidence } from "./benchmark-evidence-summary.js";
@@ -150,6 +151,20 @@ export async function handleEngineRequest(request, env) {
         items: queue,
         note: "Contradiction edges are surfaced for human review; detection does not determine which claim is correct."
       });
+    }
+
+    if (route === "evaluations" && request.method === "GET") {
+      const page = parseEvaluationPagination(url.searchParams);
+      if (!page.valid) return json({ error: page.error }, 400);
+      const filters = [];
+      if (page.experimentId) filters.push("experiment_id=eq." + encodeURIComponent(page.experimentId));
+      if (page.passed !== null) filters.push("passed=eq." + page.passed);
+      const query = "select=id,experiment_id,suite_version,metrics,passed,summary,self_declaration,self_assessment,created_at"
+        + (filters.length ? "&" + filters.join("&") : "")
+        + "&order=created_at.desc&limit=" + page.limit + "&offset=" + page.offset;
+      const evaluations = await rest(ctx, "nexus_evaluations?" + query);
+      const items = Array.isArray(evaluations) ? evaluations : [];
+      return json({ success: true, items, page: { limit: page.limit, offset: page.offset, returned: items.length, next_offset: items.length === page.limit ? page.offset + page.limit : null }, filters: { experiment_id: page.experimentId, passed: page.passed } });
     }
 
     if (route.startsWith("evaluations/") && route.endsWith("/verify") && request.method === "GET") {
