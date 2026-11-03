@@ -9,6 +9,21 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
   if (minConfidence !== null && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
     throw new TypeError("Minimum confidence must be between 0 and 1.");
   }
+  const adjacency = new Map();
+  const addNeighbor = (nodeId, neighbor) => {
+    if (!adjacency.has(nodeId)) adjacency.set(nodeId, []);
+    adjacency.get(nodeId).push(neighbor);
+  };
+  for (const edge of edges) {
+    if (!edge || (relation && String(edge.relation_type).toLowerCase() !== relation)) continue;
+    if (minConfidence !== null && (!Number.isFinite(Number(edge.confidence)) || Number(edge.confidence) < minConfidence)) continue;
+    if ((direction === "outgoing" || direction === "both") && typeof edge.source_node_id === "string" && typeof edge.target_node_id === "string") {
+      addNeighbor(edge.source_node_id, { edge, nextId: edge.target_node_id, viaDirection: "outgoing" });
+    }
+    if ((direction === "incoming" || direction === "both") && typeof edge.source_node_id === "string" && typeof edge.target_node_id === "string") {
+      addNeighbor(edge.target_node_id, { edge, nextId: edge.source_node_id, viaDirection: "incoming" });
+    }
+  }
   const visited = new Set([startNodeId]);
   const frontier = [{ id: startNodeId, depth: 0 }];
   const reached = [];
@@ -17,14 +32,8 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
   while (frontier.length && reached.length < nodeLimit) {
     const current = frontier.shift();
     if (current.depth >= depthLimit) continue;
-    for (const edge of edges) {
-      if (!edge || (relation && String(edge.relation_type).toLowerCase() !== relation)) continue;
-      if (minConfidence !== null && (!Number.isFinite(Number(edge.confidence)) || Number(edge.confidence) < minConfidence)) continue;
-      const outgoing = edge.source_node_id === current.id;
-      const incoming = edge.target_node_id === current.id;
-      if (!(direction === "both" ? outgoing || incoming : direction === "incoming" ? incoming : outgoing)) continue;
-      const nextId = outgoing ? edge.target_node_id : edge.source_node_id;
-      if (typeof nextId !== "string") continue;
+    for (const neighbor of adjacency.get(current.id) || []) {
+      const { edge, nextId, viaDirection } = neighbor;
       const edgeKey = typeof edge.id === "string" && edge.id
         ? edge.id
         : [edge.source_node_id, edge.target_node_id, edge.relation_type ?? ""].join("|");
@@ -34,7 +43,7 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
       }
       if (visited.has(nextId)) continue;
       visited.add(nextId);
-      const item = { id: nextId, depth: current.depth + 1, via_edge_id: edge.id ?? null, via_direction: outgoing ? "outgoing" : "incoming" };
+      const item = { id: nextId, depth: current.depth + 1, via_edge_id: edge.id ?? null, via_direction: viaDirection };
       reached.push(item);
       frontier.push(item);
       if (reached.length >= nodeLimit) break;
