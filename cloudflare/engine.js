@@ -12,7 +12,7 @@ import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
 import { validateKnowledgeEdge } from "./knowledge-edge-integrity.js";
 import { evaluateEvaluationStages } from "./evaluation-stages.js";
-import { createEvidenceIntegrityManifest } from "./evidence-integrity.js";
+import { createEvidenceIntegrityManifest, verifyEvidenceIntegrityManifest } from "./evidence-integrity.js";
 
 const MAX_BODY = 16000;
 
@@ -149,6 +149,34 @@ export async function handleEngineRequest(request, env) {
         count: queue.length,
         items: queue,
         note: "Contradiction edges are surfaced for human review; detection does not determine which claim is correct."
+      });
+    }
+
+    if (route.startsWith("evaluations/") && route.endsWith("/verify") && request.method === "GET") {
+      const evaluationId = route.slice("evaluations/".length, -"/verify".length);
+      if (!/^[0-9a-f-]{36}$/i.test(evaluationId)) return json({ error: "A valid evaluation id UUID is required." }, 400);
+      const rows = await rest(ctx, "nexus_evaluations?id=eq." + encodeURIComponent(evaluationId) + "&select=id,experiment_id,suite_version,evidence,created_at&limit=1");
+      if (!Array.isArray(rows) || !rows.length) return json({ error: "Evaluation was not found." }, 404);
+      const evaluation = rows[0];
+      const evidence = safeObject(evaluation.evidence);
+      const manifest = evidence.evidence_integrity;
+      if (!manifest) return json({ success: true, evaluation_id: evaluation.id, verified: false, reason: "No integrity manifest is stored for this evaluation." });
+      const payload = {
+        suite_version: evaluation.suite_version,
+        reproducibility_fingerprint: safeObject(evidence.reproducibility).fingerprint,
+        results: evidence.results
+      };
+      const verified = await verifyEvidenceIntegrityManifest(payload, manifest);
+      return json({
+        success: true,
+        evaluation_id: evaluation.id,
+        verified,
+        algorithm: manifest.algorithm,
+        canonicalization: manifest.canonicalization,
+        expected_sha256: manifest.sha256,
+        byte_length: manifest.byte_length,
+        checked_at: new Date().toISOString(),
+        reason: verified ? null : "Stored evaluation evidence does not match its integrity manifest."
       });
     }
 
