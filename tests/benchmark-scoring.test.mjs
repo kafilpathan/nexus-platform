@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { EVALUATION_SUITE_VERSION, scoreBenchmarkAnswer } from "../cloudflare/benchmark-scoring.js";
 
 test("evaluation suite has an explicit version", () => {
-  assert.equal(EVALUATION_SUITE_VERSION, "evolution-v2");
+  assert.equal(EVALUATION_SUITE_VERSION, "evolution-v3");
 });
 
 test("all expected signals must be present to pass", () => {
@@ -57,7 +57,7 @@ test("expected terms require token boundaries", () => {
 
 test("expected multiword phrases match normalized whitespace and punctuation", () => {
   assert.equal(scoreBenchmarkAnswer("Evidence is limited; uncertainty remains.", { expected: ["evidence", "uncertainty remains"], forbidden: [] }).passed, true);
-  assert.equal(scoreBenchmarkAnswer("Cannot\\nverify the claim.", { expected: ["cannot verify"], forbidden: [] }).passed, true);
+  assert.equal(scoreBenchmarkAnswer("Cannot\nverify the claim.", { expected: ["cannot verify"], forbidden: [] }).passed, true);
 });
 
 test("forbidden credential prefixes remain substring-detected", () => {
