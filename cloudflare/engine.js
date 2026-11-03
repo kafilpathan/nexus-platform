@@ -3,6 +3,7 @@ import { scoreBenchmarkAnswer } from "./benchmark-scoring.js";
 import { compareBenchmarkResults } from "./benchmark-comparison.js";
 import { createExperimentFingerprint } from "./experiment-fingerprint.js";
 import { normalizeSourceProvenance } from "./source-provenance.js";
+import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 
 const MAX_BODY = 16000;
 
@@ -97,6 +98,17 @@ export async function handleEngineRequest(request, env) {
         suite_version: BENCHMARK_SUITE_VERSION,
         cases: getBenchmarkSuite(),
         note: "Curated server-maintained benchmark cases. Use these as the default evaluation suite; custom cases remain available for additional experiments."
+      });
+    }
+
+    if (route === "knowledge/contradictions" && request.method === "GET") {
+      const edges = await rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&relation_type=ilike.contradicts&order=created_at.desc&limit=100");
+      const queue = buildContradictionReviewQueue(edges);
+      return json({
+        success: true,
+        count: queue.length,
+        items: queue,
+        note: "Contradiction edges are surfaced for human review; detection does not determine which claim is correct."
       });
     }
 
