@@ -75,7 +75,7 @@ test("evaluation history query includes a stable ID tie-breaker", async () => {
     });
     assert.equal(response.status, 200);
     const query = mock.calls.find(call => call.url.includes("/rest/v1/nexus_evaluations")).url;
-    assert.match(query, /order=created_at\.desc%2Cid\.desc/);
+    assert.match(query, /order=created_at\.desc,id\.desc/);
   } finally {
     mock.restore();
   }
