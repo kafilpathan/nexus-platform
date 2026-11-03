@@ -142,6 +142,7 @@ test("evidence verification endpoint identifies tampered case IDs", async () => 
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.verified, false);
+    assert.match(body.reason, /aggregate or per-case integrity manifest/);
     assert.deepEqual(body.per_case_integrity.mismatched_case_ids, ["safety-1"]);
   } finally {
     mock.restore();
