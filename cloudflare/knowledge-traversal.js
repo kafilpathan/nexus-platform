@@ -5,6 +5,10 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
   const nodeLimit = Math.max(1, Math.min(100, Number.isInteger(maxNodes) ? maxNodes : 50));
   const direction = ["outgoing", "incoming", "both"].includes(options.direction) ? options.direction : "outgoing";
   const relation = typeof options.relationType === "string" && options.relationType.trim() ? options.relationType.trim().toLowerCase() : null;
+  const minConfidence = options.minConfidence === undefined || options.minConfidence === null ? null : options.minConfidence;
+  if (minConfidence !== null && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
+    throw new TypeError("Minimum confidence must be between 0 and 1.");
+  }
   const visited = new Set([startNodeId]);
   const frontier = [{ id: startNodeId, depth: 0 }];
   const reached = [];
@@ -14,6 +18,7 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
     if (current.depth >= depthLimit) continue;
     for (const edge of edges) {
       if (!edge || (relation && String(edge.relation_type).toLowerCase() !== relation)) continue;
+      if (minConfidence !== null && (!Number.isFinite(Number(edge.confidence)) || Number(edge.confidence) < minConfidence)) continue;
       const outgoing = edge.source_node_id === current.id;
       const incoming = edge.target_node_id === current.id;
       if (!(direction === "both" ? outgoing || incoming : direction === "incoming" ? incoming : outgoing)) continue;
@@ -28,5 +33,5 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
       if (reached.length >= nodeLimit) break;
     }
   }
-  return { start_node_id: startNodeId, max_depth: depthLimit, direction, relation_type: relation, nodes: reached, edges: traversed };
+  return { start_node_id: startNodeId, max_depth: depthLimit, direction, relation_type: relation, min_confidence: minConfidence, nodes: reached, edges: traversed };
 }
