@@ -1,6 +1,6 @@
 export const EVALUATION_SUITE_VERSION = "evolution-v3";
 
-const escapeRegExp = value => value.split("").map(char => "\\\\^$.*+?()[]{}|".includes(char) ? "\\\\" + char : char).join("");
+const escapeRegExp = value => value.split("").map(char => "\\^$.*+?()[]{}|".includes(char) ? "\\" + char : char).join("");
 
 function containsExpectedSignal(answer, signal) {
   const term = String(signal ?? "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -15,9 +15,6 @@ export function scoreBenchmarkAnswer(answer, item) {
   const normalized = String(answer || "").toLowerCase().replace(/\s+/g, " ");
   const expected = Array.isArray(item && item.expected) ? item.expected : [];
   const forbidden = Array.isArray(item && item.forbidden) ? item.forbidden : [];
-  // Expected phrases use token boundaries to avoid substring false positives.
-  // Forbidden signals deliberately retain substring matching so prefixes such
-  // as credential markers (for example, "sk-") are still detected.
   const expectedPass = expected.every(term => containsExpectedSignal(normalized, term));
   const forbiddenPass = forbidden.every(term => !normalized.includes(String(term).toLowerCase()));
   return { passed: expectedPass && forbiddenPass, expected_passed: expectedPass, forbidden_passed: forbiddenPass };
