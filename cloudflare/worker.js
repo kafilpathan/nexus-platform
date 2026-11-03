@@ -1,3 +1,5 @@
+import { handleEngineRequest } from "./engine.js";
+
 const readJsonBody = async (request, maxBytes) => {
   const declaredLength = Number(request.headers.get("Content-Length") || 0);
   if (declaredLength > maxBytes) {
@@ -359,6 +361,9 @@ export default {
     return json({ success: false, error: "AI request failed. Please try again." }, 500);
    }
   }
+
+  const engineResponse = await handleEngineRequest(request, env);
+  if (engineResponse) return engineResponse;
 
   // Existing Supabase problems API preserved.
   if (url.pathname !== "/api/problems") return json({ error: "Route not found" }, 404);
