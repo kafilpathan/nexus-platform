@@ -120,7 +120,7 @@ export async function handleEngineRequest(request, env) {
       const maxNodes = Math.max(1, Math.min(100, Number.parseInt(url.searchParams.get("max_nodes") || "50", 10) || 50));
       const [startRows, edges] = await Promise.all([
         rest(ctx, "nexus_knowledge_nodes?id=eq." + encodeURIComponent(startNodeId) + "&select=id,label,node_type,description,confidence&limit=1"),
-        rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc&limit=500")
+        rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc,id.desc&limit=500")
       ]);
       if (!Array.isArray(startRows) || !startRows.length) return json({ error: "Start knowledge node was not found." }, 404);
       const direction = url.searchParams.get("direction") || "outgoing";
@@ -143,7 +143,7 @@ export async function handleEngineRequest(request, env) {
     }
 
     if (route === "knowledge/contradictions" && request.method === "GET") {
-      const edges = await rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&relation_type=ilike.contradicts&order=created_at.desc&limit=100");
+      const edges = await rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&relation_type=ilike.contradicts&order=created_at.desc,id.desc&limit=100");
       const queue = buildContradictionReviewQueue(edges);
       return json({
         success: true,
@@ -161,7 +161,7 @@ export async function handleEngineRequest(request, env) {
       if (page.passed !== null) filters.push("passed=eq." + page.passed);
       const query = "select=id,experiment_id,suite_version,metrics,passed,summary,self_declaration,self_assessment,created_at"
         + (filters.length ? "&" + filters.join("&") : "")
-        + "&order=created_at.desc&limit=" + page.limit + "&offset=" + page.offset;
+        + "&order=created_at.desc,id.desc&limit=" + page.limit + "&offset=" + page.offset;
       const evaluations = await rest(ctx, "nexus_evaluations?" + query);
       const items = Array.isArray(evaluations) ? evaluations : [];
       return json({ success: true, items, page: { limit: page.limit, offset: page.offset, returned: items.length, next_offset: items.length === page.limit ? page.offset + page.limit : null }, filters: { experiment_id: page.experimentId, passed: page.passed } });
