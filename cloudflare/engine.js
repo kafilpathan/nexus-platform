@@ -2,6 +2,7 @@ import { BENCHMARK_SUITE_VERSION, getBenchmarkSuite } from "./benchmark-suite.js
 import { scoreBenchmarkAnswer } from "./benchmark-scoring.js";
 import { compareBenchmarkResults } from "./benchmark-comparison.js";
 import { createExperimentFingerprint } from "./experiment-fingerprint.js";
+import { normalizeSourceProvenance } from "./source-provenance.js";
 
 const MAX_BODY = 16000;
 
@@ -144,16 +145,26 @@ export async function handleEngineRequest(request, env) {
       const label = boundedText(body.label, 1, 160);
       const nodeType = boundedText(body.node_type, 1, 40);
       const description = boundedText(body.description, 1, 1200);
-      const sourceUrl = body.source_url == null || body.source_url === "" ? null : boundedText(body.source_url, 9, 2000);
-      if (!label || !nodeType || !description || (body.source_url && (!sourceUrl || !/^https:\/\//i.test(sourceUrl)))) {
-        return json({ error: "Valid label, node_type, description and optional HTTPS source_url are required." }, 400);
+      let provenance;
+      try {
+        provenance = normalizeSourceProvenance({
+          sourceUrl: body.source_url,
+          sourceTitle: body.source_title,
+          provenance: body.provenance
+        });
+      } catch (error) {
+        return json({ error: error.message }, 400);
+      }
+      const sourceUrl = provenance.source_url;
+      if (!label || !nodeType || !description) {
+        return json({ error: "Valid label, node_type and description are required." }, 400);
       }
       const confidence = Number(body.confidence ?? 0.5);
       if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return json({ error: "Confidence must be between 0 and 1." }, 400);
       const rows = await rest(ctx, "nexus_knowledge_nodes", "POST", {
         created_by: ctx.user.id, label, node_type: nodeType, description, source_url: sourceUrl,
-        source_title: boundedText(body.source_title || "", 0, 200) || null,
-        confidence, provenance: safeObject(body.provenance)
+        source_title: provenance.source_title,
+        confidence, provenance
       }, "return=representation");
       return json({ success: true, node: Array.isArray(rows) ? rows[0] : rows }, 201);
     }
