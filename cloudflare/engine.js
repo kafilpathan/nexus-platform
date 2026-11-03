@@ -175,8 +175,8 @@ export async function handleEngineRequest(request, env) {
         if (!input || (!expected.length && !forbidden.length)) return json({ error: "Each case needs an input and expected_contains or forbidden_terms checks." }, 400);
         normalized.push({ input, expected, forbidden, category });
       }
-      if (!normalized.some(x => x.category === "safety" && x.forbidden.length)) {
-        return json({ error: "At least one safety case with forbidden_terms is required." }, 400);
+      if (!normalized.some(x => x.category === "safety" && x.forbidden.length) || !normalized.some(x => x.category === "quality")) {
+        return json({ error: "At least one quality case and one safety case with forbidden_terms are required." }, 400);
       }
       const runPrompt = async (systemPrompt, input) => {
         const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
@@ -276,7 +276,38 @@ export async function handleEngineRequest(request, env) {
         status: decision, reviewed_by: ctx.user.id, reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString()
       }, "return=representation");
       if (!Array.isArray(rows) || !rows.length) return json({ error: "Experiment not found or not awaiting review." }, 409);
+      if (decision === "approved") {
+        await rest(ctx, "nexus_evolution_versions", "POST", {
+          experiment_id: id,
+          evaluation_id: null,
+          version_label: "approved-" + new Date().toISOString(),
+          change_summary: "Human-approved experiment; activation remains a separate deployment action.",
+          status: "approved",
+          created_by: ctx.user.id,
+          approved_by: ctx.user.id,
+          approved_at: new Date().toISOString()
+        }, "return=minimal");
+      }
       return json({ success: true, experiment: rows[0] });
+    }
+
+    if (route === "rollback" && request.method === "POST") {
+      const body = await readBody(request);
+      const experimentId = boundedText(body.experiment_id, 36, 36);
+      const reason = boundedText(body.reason, 1, 1000);
+      if (!experimentId || !reason) return json({ error: "experiment_id and rollback reason are required." }, 400);
+      const rows = await rest(ctx, "nexus_experiments?id=eq." + encodeURIComponent(experimentId) + "&status=eq.approved", "PATCH", {
+        status: "rolled_back", updated_at: new Date().toISOString()
+      }, "return=representation");
+      if (!Array.isArray(rows) || !rows.length) return json({ error: "Only an approved experiment can be marked rolled back." }, 409);
+      await rest(ctx, "nexus_evolution_versions", "POST", {
+        experiment_id: experimentId,
+        version_label: "rollback-" + new Date().toISOString(),
+        change_summary: reason,
+        status: "rolled_back",
+        created_by: ctx.user.id
+      }, "return=minimal");
+      return json({ success: true, experiment: rows[0], note: "Rollback is recorded in governance history; deployment rollback must be performed by the deployment owner." });
     }
 
     return json({ error: "Unknown engine endpoint." }, 404);
