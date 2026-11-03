@@ -12,7 +12,7 @@ import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
 import { validateKnowledgeEdge } from "./knowledge-edge-integrity.js";
 import { evaluateEvaluationStages } from "./evaluation-stages.js";
-import { createEvidenceIntegrityManifest, verifyEvidenceIntegrityManifest } from "./evidence-integrity.js";
+import { createEvidenceIntegrityManifest, verifyEvidenceIntegrityManifest, createPerCaseIntegrityManifests, verifyPerCaseIntegrityManifests } from "./evidence-integrity.js";
 
 const MAX_BODY = 16000;
 
@@ -167,10 +167,14 @@ export async function handleEngineRequest(request, env) {
         results: evidence.results
       };
       const verified = await verifyEvidenceIntegrityManifest(payload, manifest);
+      const perCaseIntegrity = evidence.per_case_integrity
+        ? await verifyPerCaseIntegrityManifests(evidence.results, evidence.per_case_integrity)
+        : null;
       return json({
         success: true,
         evaluation_id: evaluation.id,
-        verified,
+        verified: verified && (perCaseIntegrity === null || perCaseIntegrity.verified),
+        per_case_integrity: perCaseIntegrity,
         algorithm: manifest.algorithm,
         canonicalization: manifest.canonicalization,
         expected_sha256: manifest.sha256,
@@ -384,6 +388,7 @@ export async function handleEngineRequest(request, env) {
         reproducibility_fingerprint: reproducibility.fingerprint,
         results
       });
+      const perCaseIntegrity = await createPerCaseIntegrityManifests(results);
       const metrics = {
         quality_score: Number(quality.toFixed(4)),
         safety_score: Number(safety.toFixed(4)),
@@ -402,7 +407,7 @@ export async function handleEngineRequest(request, env) {
       const rows = await rest(ctx, "nexus_evaluations", "POST", {
         created_by: ctx.user.id, experiment_id: experimentId, suite_version: BENCHMARK_SUITE_VERSION,
         metrics, passed, summary, self_declaration: selfDeclaration, self_assessment: selfAssessment,
-        evidence: { model: "@cf/meta/llama-3.1-8b-instruct-fp8", results, replay_spec: replaySpec, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, evidence_integrity: evidenceIntegrity }
+        evidence: { model: "@cf/meta/llama-3.1-8b-instruct-fp8", results, replay_spec: replaySpec, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, evidence_integrity: evidenceIntegrity, per_case_integrity: perCaseIntegrity }
       }, "return=representation");
       if (passed) {
         await rest(ctx, "nexus_experiments?id=eq." + encodeURIComponent(experimentId), "PATCH", {
