@@ -117,13 +117,17 @@ export async function handleEngineRequest(request, env) {
         rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc&limit=500")
       ]);
       if (!Array.isArray(startRows) || !startRows.length) return json({ error: "Start knowledge node was not found." }, 404);
-      const traversal = traverseKnowledgeGraph(edges, startNodeId, maxDepth, maxNodes);
+      const direction = url.searchParams.get("direction") || "outgoing";
+      if (!["outgoing", "incoming", "both"].includes(direction)) return json({ error: "direction must be outgoing, incoming, or both." }, 400);
+      const relationType = url.searchParams.get("relation_type") || null;
+      if (relationType && !/^[a-z][a-z0-9_-]{0,59}$/i.test(relationType)) return json({ error: "Invalid relation_type filter." }, 400);
+      const traversal = traverseKnowledgeGraph(edges, startNodeId, maxDepth, maxNodes, { direction, relationType });
       const ids = [...new Set([startNodeId, ...traversal.nodes.map(node => node.id)])];
       const nodes = await rest(ctx, "nexus_knowledge_nodes?select=id,label,node_type,description,confidence,source_url,source_title&id=in.(" + ids.map(encodeURIComponent).join(",") + ")");
       return json({
         success: true,
         traversal: { ...traversal, nodes: nodes.map(node => ({ ...node, depth: node.id === startNodeId ? 0 : traversal.nodes.find(item => item.id === node.id)?.depth ?? null })) },
-        note: "Traversal is outgoing-edge only and bounded by depth, node count, and a 500-edge snapshot."
+        note: "Traversal direction and relation type are filterable; results are bounded by depth, node count, and a 500-edge snapshot."
       });
     }
 
