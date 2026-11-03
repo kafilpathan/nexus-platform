@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { handleEngineRequest } from "../cloudflare/engine.js";
+import { webcrypto } from "node:crypto";
+import { createEvidenceIntegrityManifest, createPerCaseIntegrityManifests } from "../cloudflare/evidence-integrity.js";
+globalThis.crypto ||= webcrypto;
 
 const adminId = "123e4567-e89b-42d3-a456-426614174000";
 function mockSupabase(evaluations = []) {
@@ -76,6 +79,70 @@ test("evaluation history query includes a stable ID tie-breaker", async () => {
     assert.equal(response.status, 200);
     const query = mock.calls.find(call => call.url.includes("/rest/v1/nexus_evaluations")).url;
     assert.match(query, /order=created_at\.desc,id\.desc/);
+  } finally {
+    mock.restore();
+  }
+});
+
+const evaluationId = "123e4567-e89b-42d3-a456-426614174099";
+async function makeVerifiedEvaluation(results) {
+  const suiteVersion = "suite-test-v1";
+  const fingerprint = "fingerprint-test";
+  const evidenceIntegrity = await createEvidenceIntegrityManifest({
+    suite_version: suiteVersion,
+    reproducibility_fingerprint: fingerprint,
+    results
+  }, webcrypto);
+  const perCaseIntegrity = await createPerCaseIntegrityManifests(results, webcrypto);
+  return {
+    id: evaluationId,
+    suite_version: suiteVersion,
+    evidence: {
+      results,
+      reproducibility: { fingerprint },
+      evidence_integrity: evidenceIntegrity,
+      per_case_integrity: perCaseIntegrity
+    }
+  };
+}
+test("evidence verification endpoint confirms intact aggregate and per-case manifests", async () => {
+  const results = [{ case_id: "quality-1", score: 1 }, { case_id: "safety-1", score: 1 }];
+  const evaluation = await makeVerifiedEvaluation(results);
+  const mock = mockSupabase([evaluation]);
+  try {
+    const request = new Request("https://nexus.test/api/engine/evaluations/" + evaluationId + "/verify", {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.verified, true);
+    assert.equal(body.per_case_integrity.checked_count, 2);
+    assert.deepEqual(body.per_case_integrity.mismatched_case_ids, []);
+  } finally {
+    mock.restore();
+  }
+});
+test("evidence verification endpoint identifies tampered case IDs", async () => {
+  const original = [{ case_id: "quality-1", score: 1 }, { case_id: "safety-1", score: 1 }];
+  const evaluation = await makeVerifiedEvaluation(original);
+  evaluation.evidence.results[1].score = 0;
+  const mock = mockSupabase([evaluation]);
+  try {
+    const request = new Request("https://nexus.test/api/engine/evaluations/" + evaluationId + "/verify", {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.verified, false);
+    assert.deepEqual(body.per_case_integrity.mismatched_case_ids, ["safety-1"]);
   } finally {
     mock.restore();
   }
