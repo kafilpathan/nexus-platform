@@ -52,3 +52,16 @@ The Worker also exposes admin-only endpoints under `/api/engine/*`. Every reques
 - `POST /api/engine/knowledge/nodes` and `POST /api/engine/knowledge/edges`: add sourced knowledge graph records.
 
 Approval is human-gated. Evaluation metrics are supplied by the caller and are not independently verified by this API. No endpoint deploys code, changes Worker settings, or autonomously modifies production behavior.
+
+
+## Memory Core diagnostics and consent
+
+Memory use is off by default. The chat checkbox is explicit opt-in for per-user memory retrieval and eligible project-chat auto-save. Auto-save is limited to messages containing an explicit NEXUS/KAF-AI/Memory Core/Cloudflare Worker/Supabase signal and excludes common sensitive-data terms. This keyword filter is a minimization aid, not a privacy guarantee. Auto-save remains admin-only.
+
+When memory is enabled, chat responses may include only fixed diagnostic labels (`status`, `stage`) and a numeric upstream HTTP status. Diagnostics never include bearer tokens, user IDs, memory contents, or upstream response bodies. Normal chat continues if memory retrieval fails.
+
+## Public problem submission rate limiting
+
+The Worker supports an optional Cloudflare Rate Limiting binding named `PROBLEM_RATE_LIMIT`. Configure it on the `nexus-kaf-ai` Worker before promoting anonymous submissions. Suggested initial threshold: 5 requests per 60 seconds. The key uses the Cloudflare `CF-Connecting-IP` header. A limited request receives HTTP 429. If a configured limiter errors, the Worker fails closed with HTTP 503. If the binding is absent, the endpoint remains backward-compatible but is not rate limited; the root status endpoint reports `problemRateLimit: not_configured`. Cloudflare built-in limits are approximate and location-scoped. Do not describe public submission protection as active until the binding is configured and a 429 test succeeds.
+
+No repository merge or Pages deployment configures this binding automatically.

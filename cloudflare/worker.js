@@ -386,7 +386,8 @@ export default {
     status: "online",
     database: env.SUPABASE_URL ? "configured" : "missing",
     ai: env.AI ? "Cloudflare Workers AI connected" : "missing",
-    memory: "optional authenticated per-user retrieval"
+    memory: "optional authenticated per-user retrieval",
+    problemRateLimit: env.PROBLEM_RATE_LIMIT && typeof env.PROBLEM_RATE_LIMIT.limit === "function" ? "configured" : "not_configured"
    });
   }
 
@@ -425,70 +426,55 @@ export default {
     // then PostgREST runs with that same user's JWT so nexus_memory RLS applies.
     let selectedMemories = [];
     let memoryStatus = "not_requested";
+    let memoryStage = "none";
+    let memoryHttpStatus = null;
     const authHeader = request.headers.get("Authorization") || "";
     const bearer = authHeader.match(/^Bearer\s+(.+)$/i);
-    if (body.useMemory === true && bearer && env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY) {
+    if (body.useMemory === true && !bearer) {
+     memoryStatus = "missing_token";
+     memoryStage = "request";
+    } else if (body.useMemory === true && (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY)) {
+     memoryStatus = "missing_config";
+     memoryStage = "worker_config";
+    } else if (body.useMemory === true) {
      try {
       const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, "");
       const token = bearer[1];
+      memoryStage = "auth";
       const userResponse = await fetch(supabaseUrl + "/auth/v1/user", {
-       headers: {
-        "apikey": env.SUPABASE_PUBLISHABLE_KEY,
-        "Authorization": "Bearer " + token
-       }
+       headers: { "apikey": env.SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token }
       });
+      memoryHttpStatus = userResponse.status;
       if (userResponse.ok) {
        const user = await userResponse.json();
        if (user && typeof user.id === "string") {
-        const params = new URLSearchParams({
-         select: "category,memory_key,memory_value,updated_at",
-         owner_id: "eq." + user.id,
-         order: "updated_at.desc",
-         limit: "30"
-        });
-        const memoryResponse = await fetch(supabaseUrl + "/rest/v1/nexus_memory?" + params.toString(), {
-         headers: {
-          "apikey": env.SUPABASE_PUBLISHABLE_KEY,
-          "Authorization": "Bearer " + token,
-          "Accept": "application/json"
-         }
-        });
+        memoryStage = "database";
+        const params = new URLSearchParams({ select: "category,memory_key,memory_value,updated_at", owner_id: "eq." + user.id, order: "updated_at.desc", limit: "30" });
+        const memoryResponse = await fetch(supabaseUrl + "/rest/v1/nexus_memory?" + params.toString(), { headers: { "apikey": env.SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token, "Accept": "application/json" } });
+        memoryHttpStatus = memoryResponse.status;
         if (memoryResponse.ok) {
          const rows = await memoryResponse.json();
-         const stop = new Set(["the","and","for","with","from","that","this","have","your","you","are","was","were","what","when","where","how","why","can","could","should","would","about","into","their","them","then","than","our","out","use","using","please","help","make","does","did","has","had","will","shall","not","but","all","any","who","its","it's"]);
+         const stop = new Set(["the","and","for","with","from","that","this","have","your","you","are","was","were","what","when","where","how","why","can","could","should","would","about","into","their","them","then","than","our","out","use","using","please","help","make","does","did","has","had","will","shall","not","but","all","any","who","its"]);
          const terms = text => new Set((text.toLowerCase().match(/[a-z0-9]{3,}/g) || []).filter(word => !stop.has(word)));
          const queryText = [message, ...history.filter(item => item.role === "user").slice(-3).map(item => item.content)].join(" ");
          const queryTerms = terms(queryText);
          if (queryTerms.size) {
-          selectedMemories = (Array.isArray(rows) ? rows : [])
-           .map(row => {
-            const memoryTerms = terms((row.memory_key || "") + " " + (row.memory_value || "") + " " + (row.category || ""));
-            let overlap = 0;
-            queryTerms.forEach(term => { if (memoryTerms.has(term)) overlap++; });
-            return { row, score: overlap / Math.sqrt(Math.max(1, queryTerms.size) * Math.max(1, memoryTerms.size)) };
-           })
-           .filter(item => item.score > 0)
-           .sort((a,b) => b.score - a.score)
-           .slice(0, 5)
-           .map(item => item.row);
+          selectedMemories = (Array.isArray(rows) ? rows : []).map(row => {
+           const memoryTerms = terms((row.memory_key || "") + " " + (row.memory_value || "") + " " + (row.category || ""));
+           let overlap = 0;
+           queryTerms.forEach(term => { if (memoryTerms.has(term)) overlap++; });
+           return { row, score: overlap / Math.sqrt(Math.max(1, queryTerms.size) * Math.max(1, memoryTerms.size)) };
+          }).filter(item => item.score > 0).sort((a,b) => b.score - a.score).slice(0, 5).map(item => item.row);
          }
          memoryStatus = selectedMemories.length ? "retrieved" : "no_match";
-        } else {
-         memoryStatus = "unavailable";
-        }
-       } else {
-        memoryStatus = "unauthenticated";
-       }
-      } else {
-       memoryStatus = "unauthenticated";
-      }
+        } else { memoryStatus = "database_rejected"; }
+       } else { memoryStatus = "invalid_auth_response"; }
+      } else { memoryStatus = "auth_rejected"; }
      } catch (_) {
-      // Memory failures must not take down ordinary chat; never log tokens or memory text.
-      memoryStatus = "unavailable";
+      // Metadata-only diagnostics: never log tokens, user IDs, memory values, or upstream response bodies.
+      memoryStatus = "service_error";
       selectedMemories = [];
      }
-    } else if (body.useMemory === true) {
-     memoryStatus = "unavailable";
     }
 
     const memoryContext = selectedMemories.length
@@ -551,7 +537,7 @@ export default {
     return json({
      success: true,
      reply: answer || "No response generated.",
-     memory: { status: memoryStatus, count: selectedMemories.length },
+     memory: { status: memoryStatus, count: selectedMemories.length, stage: memoryStage, httpStatus: memoryHttpStatus },
      realWorld: { connected: Boolean(realWorld.context), sources: realWorld.sources },
      evaluation
     });
@@ -583,6 +569,17 @@ export default {
      response.ok ? 200 : response.status);
    }
    if (request.method === "POST") {
+    // Optional Cloudflare Rate Limiting binding. Configure before public promotion.
+    // IP-based keys are approximate and location-scoped in Cloudflare.
+    if (env.PROBLEM_RATE_LIMIT && typeof env.PROBLEM_RATE_LIMIT.limit === "function") {
+     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+     try {
+      const decision = await env.PROBLEM_RATE_LIMIT.limit({ key: "public-problem:" + ip });
+      if (!decision.success) return json({ success: false, error: "Too many submissions. Please wait before trying again." }, 429);
+     } catch (_) {
+      return json({ success: false, error: "Submission protection is temporarily unavailable. Please try again later." }, 503);
+     }
+    }
     let body;
     try { body = await readJsonBody(request, 8000); }
     catch (error) { return json({ error: error.message }, error.statusCode || 400); }
