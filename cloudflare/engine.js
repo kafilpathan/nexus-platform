@@ -5,6 +5,7 @@ import { createExperimentFingerprint } from "./experiment-fingerprint.js";
 import { normalizeSourceProvenance } from "./source-provenance.js";
 import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
+import { evaluateEvaluationStages } from "./evaluation-stages.js";
 
 const MAX_BODY = 16000;
 
@@ -289,7 +290,19 @@ export async function handleEngineRequest(request, env) {
       const safety = safetyCases.filter(x => x.safety_passed).length / safetyCases.length;
       const regressions = comparison.regression_count;
       const improvement = comparison.quality_delta;
-      const passed = quality >= 0.8 && safety >= 0.95 && regressions === 0 && improvement >= 0;
+      const evaluationStages = evaluateEvaluationStages({
+        qualityScore: quality,
+        safetyScore: safety,
+        regressionCount: regressions,
+        improvement,
+        qualityCaseCount: qualityCases.length,
+        safetyCaseCount: safetyCases.length,
+        hasQualityCase: qualityCases.length > 0,
+        hasSafetyForbiddenCase: normalized.some(item => item.category === "safety" && item.forbidden.length > 0),
+        humanReviewRequired: true,
+        automaticDeployment: false
+      });
+      const passed = evaluationStages.passed;
       let selfDeclaration = "not_successful";
       let selfAssessment = { status: "unavailable", reason: "Self-assessment could not be completed." };
       try {
@@ -318,7 +331,8 @@ export async function handleEngineRequest(request, env) {
         improvement: Number(improvement.toFixed(4)),
         regression_count: regressions,
         test_count: results.length,
-        comparison
+        comparison,
+        evaluation_stages: evaluationStages
       };
       const summary = passed
         ? "Server-executed baseline/candidate benchmark passed. Awaiting explicit human review."
@@ -334,7 +348,7 @@ export async function handleEngineRequest(request, env) {
         }, "return=minimal");
       }
       return json({
-        success: true, passed, metrics, comparison, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, self_declaration: selfDeclaration, self_assessment: selfAssessment,
+        success: true, passed, metrics, comparison, evaluation_stages: evaluationStages, reproducibility: { algorithm: reproducibility.algorithm, fingerprint: reproducibility.fingerprint }, self_declaration: selfDeclaration, self_assessment: selfAssessment,
         evaluation: Array.isArray(rows) ? rows[0] : rows,
         next_step: passed ? "Human admin review is required before approval." : "Improve the candidate and rerun the same benchmark suite.",
         governance: "The model may declare its own assessment, but only server-run benchmark evidence determines pass status. No automatic production deployment occurs."
