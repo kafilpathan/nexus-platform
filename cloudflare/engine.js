@@ -128,6 +128,7 @@ export async function handleEngineRequest(request, env) {
       const relationType = url.searchParams.get("relation_type") || null;
       if (relationType && !/^[a-z][a-z0-9_-]{0,59}$/i.test(relationType)) return json({ error: "Invalid relation_type filter." }, 400);
       const confidenceParam = url.searchParams.get("min_confidence");
+      if (confidenceParam !== null && !confidenceParam.trim()) return json({ error: "min_confidence must be a number between 0 and 1." }, 400);
       const minConfidence = confidenceParam === null ? null : Number(confidenceParam);
       if (minConfidence !== null && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
         return json({ error: "min_confidence must be a number between 0 and 1." }, 400);
