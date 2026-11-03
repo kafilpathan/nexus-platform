@@ -5,6 +5,7 @@ import { createExperimentFingerprint } from "./experiment-fingerprint.js";
 import { normalizeSourceProvenance } from "./source-provenance.js";
 import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
+import { validateKnowledgeEdge } from "./knowledge-edge-integrity.js";
 import { evaluateEvaluationStages } from "./evaluation-stages.js";
 import { createEvidenceIntegrityManifest } from "./evidence-integrity.js";
 
@@ -208,12 +209,14 @@ export async function handleEngineRequest(request, env) {
 
     if (route === "knowledge/edges" && request.method === "POST") {
       const body = await readBody(request);
-      const source = boundedText(body.source_node_id, 36, 36);
-      const target = boundedText(body.target_node_id, 36, 36);
-      const relation = boundedText(body.relation_type, 1, 60);
-      if (!source || !target || source === target || !relation) return json({ error: "Two distinct node IDs and a relation_type are required." }, 400);
-      const confidence = Number(body.confidence ?? 0.5);
-      if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return json({ error: "Confidence must be between 0 and 1." }, 400);
+      const candidate = validateKnowledgeEdge(body);
+      if (!candidate.valid) return json({ error: candidate.error }, candidate.duplicate ? 409 : 400);
+      const { source_node_id: source, target_node_id: target, relation_type: relation, confidence } = candidate.edge;
+      const nodeRows = await rest(ctx, "nexus_knowledge_nodes?id=in.(" + encodeURIComponent(source) + "," + encodeURIComponent(target) + ")&select=id&limit=2");
+      if (!Array.isArray(nodeRows) || nodeRows.length !== 2) return json({ error: "Both source and target knowledge nodes must exist." }, 404);
+      const existing = await rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type&source_node_id=eq." + encodeURIComponent(source) + "&target_node_id=eq." + encodeURIComponent(target) + "&limit=100");
+      const checked = validateKnowledgeEdge(candidate.edge, existing);
+      if (!checked.valid) return json({ error: checked.error }, checked.duplicate ? 409 : 400);
       const rows = await rest(ctx, "nexus_knowledge_edges", "POST", {
         created_by: ctx.user.id, source_node_id: source, target_node_id: target,
         relation_type: relation, confidence, provenance: safeObject(body.provenance)
