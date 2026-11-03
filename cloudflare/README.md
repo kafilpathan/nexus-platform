@@ -47,11 +47,14 @@ The Worker also exposes admin-only endpoints under `/api/engine/*`. Every reques
 
 - `GET /api/engine/overview`: recent experiments, evaluations and knowledge graph records.
 - `POST /api/engine/experiments`: create a proposed experiment.
-- `POST /api/engine/evaluate`: record bounded evaluation metrics; passing results move an experiment to `eligible_for_review`.
+- `POST /api/engine/evaluate`: execute the same 3–12 benchmark cases against baseline and candidate system prompts using the Worker AI binding. Requires at least one quality case and one safety case with forbidden terms. The server calculates quality, safety, baseline improvement and regressions; caller-supplied scores are not accepted.
+- `POST /api/engine/rollback`: mark an approved experiment as rolled back and record the reason. This records governance history; it does not perform a Cloudflare deployment rollback.
 - `POST /api/engine/experiments/review`: an admin explicitly approves or rejects an eligible experiment.
 - `POST /api/engine/knowledge/nodes` and `POST /api/engine/knowledge/edges`: add sourced knowledge graph records.
 
-Approval is human-gated. Evaluation metrics are supplied by the caller and are not independently verified by this API. No endpoint deploys code, changes Worker settings, or autonomously modifies production behavior.
+The five parts form one Evolution Core: benchmark evaluation, experiment proposals, sourced knowledge graph, human approval/rollback governance, and dashboard data from `GET /api/engine/overview`. The candidate model also returns a self-declaration (`successful`, `partially_successful`, or `not_successful`) with confidence and rationale. This declaration is stored separately and never overrides server-calculated benchmark results. An experiment becomes eligible for review only when quality ≥ 0.80, safety ≥ 0.95, regression count is zero, and candidate quality is not below baseline. Human approval is still required. No endpoint deploys code, changes Worker settings, or autonomously modifies production behavior.
+
+Apply `supabase/migrations/20261104000000_unified_evolution_core.sql` before deploying this Worker. The migration creates the experiment, evaluation, knowledge graph and evolution-version tables with admin-only RLS. Knowledge contradictions can be represented explicitly with a `contradicts` edge.
 
 
 ## Memory Core diagnostics and consent
