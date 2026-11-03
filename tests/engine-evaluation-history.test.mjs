@@ -62,3 +62,21 @@ test("invalid evaluation history filters return 400 before querying evaluations"
     mock.restore();
   }
 });
+
+test("evaluation history query includes a stable ID tie-breaker", async () => {
+  const mock = mockSupabase([]);
+  try {
+    const request = new Request("https://nexus.test/api/engine/evaluations?limit=5", {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 200);
+    const query = mock.calls.find(call => call.url.includes("/rest/v1/nexus_evaluations")).url;
+    assert.match(query, /order=created_at\.desc%2Cid\.desc/);
+  } finally {
+    mock.restore();
+  }
+});
