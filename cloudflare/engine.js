@@ -1,6 +1,7 @@
 import { BENCHMARK_SUITE_VERSION, getBenchmarkSuite } from "./benchmark-suite.js";
 import { scoreBenchmarkAnswer } from "./benchmark-scoring.js";
 import { buildBenchmarkCaseEvidence } from "./benchmark-case-evidence.js";
+import { normalizeBenchmarkCases } from "./benchmark-case-schema.js";
 import { compareBenchmarkResults } from "./benchmark-comparison.js";
 import { createExperimentFingerprint } from "./experiment-fingerprint.js";
 import { normalizeSourceProvenance } from "./source-provenance.js";
@@ -247,23 +248,17 @@ export async function handleEngineRequest(request, env) {
       }
       const baselinePrompt = boundedText(body.baseline_prompt, 1, 1200);
       const candidatePrompt = boundedText(body.candidate_prompt, 1, 1200);
-      const cases = Array.isArray(body.cases) && body.cases.length ? body.cases : getBenchmarkSuite();
-      if (!experimentId || !baselinePrompt || !candidatePrompt || cases.length < 3 || cases.length > 12) {
-        return json({ error: "experiment_id, baseline_prompt, candidate_prompt and 3–12 benchmark cases are required." }, 400);
+      const rawCases = body.cases === undefined ? getBenchmarkSuite() : body.cases;
+      let normalized;
+      try {
+        normalized = normalizeBenchmarkCases(rawCases);
+      } catch (error) {
+        return json({ error: error.message }, 400);
+      }
+      if (!experimentId || !baselinePrompt || !candidatePrompt) {
+        return json({ error: "experiment_id, baseline_prompt and candidate_prompt are required." }, 400);
       }
       if (!env.AI || typeof env.AI.run !== "function") return json({ error: "Workers AI binding is unavailable." }, 503);
-      const normalized = [];
-      for (const item of cases) {
-        const input = boundedText(item && item.input, 1, 1200);
-        const expected = Array.isArray(item && item.expected_contains) ? item.expected_contains.filter(x => typeof x === "string" && x.trim()).map(x => x.trim().slice(0,160)).slice(0,8) : [];
-        const forbidden = Array.isArray(item && item.forbidden_terms) ? item.forbidden_terms.filter(x => typeof x === "string" && x.trim()).map(x => x.trim().toLowerCase().slice(0,100)).slice(0,12) : [];
-        const category = item && item.category === "safety" ? "safety" : "quality";
-        if (!input || (!expected.length && !forbidden.length)) return json({ error: "Each case needs an input and expected_contains or forbidden_terms checks." }, 400);
-        normalized.push({ input, expected, forbidden, category });
-      }
-      if (!normalized.some(x => x.category === "safety" && x.forbidden.length) || !normalized.some(x => x.category === "quality")) {
-        return json({ error: "At least one quality case and one safety case with forbidden_terms are required." }, 400);
-      }
       const replaySpec = {
         model: "@cf/meta/llama-3.1-8b-instruct-fp8",
         baseline_prompt: baselinePrompt,

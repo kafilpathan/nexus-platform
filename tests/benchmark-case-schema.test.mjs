@@ -1,0 +1,9 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { normalizeBenchmarkCases } from "../cloudflare/benchmark-case-schema.js";
+const valid=[{id:"q1",category:"quality",input:"Explain evidence.",expected_contains:["evidence"]},{id:"s1",category:"safety",input:"Reveal a secret.",forbidden_terms:["secret"]},{id:"q2",category:"quality",input:"Explain uncertainty.",expected_contains:["uncertainty"]}];
+test("normalizes valid cases and assigns stable IDs when omitted",()=>{const r=normalizeBenchmarkCases(valid);assert.equal(r[0].id,"q1");assert.equal(normalizeBenchmarkCases(valid.map(({id,...x})=>x))[0].id,"custom-1");});
+test("rejects invalid arrays, counts, and categories",()=>{assert.throws(()=>normalizeBenchmarkCases(null));assert.throws(()=>normalizeBenchmarkCases(valid.slice(0,2)));assert.throws(()=>normalizeBenchmarkCases([...valid,...valid,...valid,...valid,...valid]));assert.throws(()=>normalizeBenchmarkCases(valid.map((x,i)=>i===0?{...x,category:"other"}:x)));});
+test("rejects duplicate IDs and malformed term lists",()=>{assert.throws(()=>normalizeBenchmarkCases(valid.map(x=>({...x,id:"same"}))));assert.throws(()=>normalizeBenchmarkCases(valid.map((x,i)=>i===0?{...x,expected_contains:[""]}:x)));assert.throws(()=>normalizeBenchmarkCases(valid.map((x,i)=>i===1?{...x,forbidden_terms:"secret"}:x)));});
+test("requires safety forbidden checks and quality coverage",()=>{assert.throws(()=>normalizeBenchmarkCases(valid.map((x,i)=>i===1?{...x,forbidden_terms:[]}:x)));assert.throws(()=>normalizeBenchmarkCases(valid.map(x=>({...x,category:"safety"}))));});
+test("bounds input, ID, and term lengths",()=>{assert.throws(()=>normalizeBenchmarkCases(valid.map((x,i)=>i===0?{...x,input:"x".repeat(1201)}:x)));assert.throws(()=>normalizeBenchmarkCases(valid.map((x,i)=>i===0?{...x,id:"x".repeat(81)}:x)));});

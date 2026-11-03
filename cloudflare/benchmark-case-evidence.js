@@ -10,6 +10,7 @@ export function buildBenchmarkCaseEvidence(item, baselineCheck, candidateCheck, 
   if (!expectedPassed) failedChecks.push("expected_signals");
   if (!forbiddenPassed) failedChecks.push("forbidden_signals");
   return {
+    case_id: typeof item.id === "string" ? item.id : null,
     category: item.category,
     baseline_passed: baselinePassed,
     candidate_passed: candidatePassed,
