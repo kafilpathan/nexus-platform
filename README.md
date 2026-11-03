@@ -23,8 +23,9 @@ The Netlify Functions package under `nexus_netlify_ready/netlify/` is a legacy a
 
 1. Review the changes on a branch and run the release checks in the architecture guide.
 2. Apply pending Supabase migrations to the intended project.
-3. Deploy the reviewed Worker source and verify its root status endpoint.
+3. Configure the `PROBLEM_RATE_LIMIT` binding for the Worker (5 requests / 60 seconds with an account-unique namespace ID), deploy the reviewed Worker source, and verify the root status reports `problemRateLimit: configured`.
 4. Deploy the static frontend.
-5. Test chat, memory-disabled chat, signed-in memory, admin actions, and community problem submission.
+5. Test chat, memory-disabled chat, signed-in memory, admin actions, and community problem submission, including a 429 rate-limit test.
+6. Review Supabase Auth password-security settings. Built-in leaked-password protection requires Supabase Pro or above; the current project is on Free.
 
 Never commit secrets. Keep the Supabase service-role key in Cloudflare Worker secrets only; the browser may contain only the publishable/anon key.
