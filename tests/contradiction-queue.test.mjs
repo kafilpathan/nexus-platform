@@ -33,3 +33,12 @@ test("invalid confidence is marked unknown instead of treated as zero", () => {
   assert.equal(item.confidence, null);
   assert.equal(item.confidence_band, "unknown");
 });
+
+test("uses edge ID as a deterministic final ordering key", () => {
+  const queue = buildContradictionReviewQueue([
+    { id: "edge-a", relation_type: "contradicts", confidence: 0.8, created_at: "2026-11-04T00:00:00Z" },
+    { id: "edge-c", relation_type: "contradicts", confidence: 0.8, created_at: "2026-11-04T00:00:00Z" },
+    { id: "edge-b", relation_type: "contradicts", confidence: 0.8, created_at: "2026-11-04T00:00:00Z" }
+  ]);
+  assert.deepEqual(queue.map(item => item.id), ["edge-c", "edge-b", "edge-a"]);
+});
