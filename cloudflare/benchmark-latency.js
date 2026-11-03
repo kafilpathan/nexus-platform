@@ -12,13 +12,18 @@ export function summarizeBenchmarkLatency(results) {
   }
   const stats = values => {
     const sorted = [...values].sort((a,b) => a-b);
+    const mean = values.reduce((sum,value) => sum + value, 0) / values.length;
+    const variance = values.reduce((sum,value) => sum + ((value - mean) ** 2), 0) / values.length;
+    const stddev = Math.sqrt(variance);
     const percentile = p => sorted[Math.min(sorted.length - 1, Math.ceil(p * sorted.length) - 1)];
     return {
-      mean_ms: Number((values.reduce((sum,value) => sum + value, 0) / values.length).toFixed(2)),
+      mean_ms: Number(mean.toFixed(2)),
       median_ms: Number(((sorted[Math.floor((sorted.length - 1) / 2)] + sorted[Math.ceil((sorted.length - 1) / 2)]) / 2).toFixed(2)),
       p95_ms: Number(percentile(0.95).toFixed(2)),
       min_ms: Number(sorted[0].toFixed(2)),
-      max_ms: Number(sorted[sorted.length - 1].toFixed(2))
+      max_ms: Number(sorted[sorted.length - 1].toFixed(2)),
+      stddev_ms: Number(stddev.toFixed(2)),
+      coefficient_of_variation_percent: mean === 0 ? null : Number(((stddev / mean) * 100).toFixed(2))
     };
   };
   const baselineStats = stats(baseline);
