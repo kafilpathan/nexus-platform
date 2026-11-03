@@ -1422,7 +1422,6 @@ status.setAttribute("aria-label", "Problem status");
  };
  const db=window.nexusSupabaseClient;
  if(db)db.auth.onAuthStateChange(event=>{if(event==="SIGNED_IN")Promise.resolve().then(refresh);});
- $("nexusEngineRefresh").addEventListener("click",refresh);
 })();
 </script>
 
