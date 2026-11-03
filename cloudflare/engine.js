@@ -4,6 +4,7 @@ import { buildBenchmarkCaseEvidence } from "./benchmark-case-evidence.js";
 import { compareBenchmarkResults } from "./benchmark-comparison.js";
 import { createExperimentFingerprint } from "./experiment-fingerprint.js";
 import { normalizeSourceProvenance } from "./source-provenance.js";
+import { findDuplicateKnowledgeNode } from "./knowledge-node-integrity.js";
 import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
 import { validateKnowledgeEdge } from "./knowledge-edge-integrity.js";
@@ -204,6 +205,14 @@ export async function handleEngineRequest(request, env) {
       }
       const confidence = Number(body.confidence ?? 0.5);
       if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return json({ error: "Confidence must be between 0 and 1." }, 400);
+      const [sourceMatches, identityMatches] = await Promise.all([
+        sourceUrl
+          ? rest(ctx, "nexus_knowledge_nodes?select=id,label,node_type,source_url&source_url=eq." + encodeURIComponent(sourceUrl) + "&limit=10")
+          : Promise.resolve([]),
+        rest(ctx, "nexus_knowledge_nodes?select=id,label,node_type,source_url&label=ilike." + encodeURIComponent(label) + "&node_type=ilike." + encodeURIComponent(nodeType) + "&limit=50")
+      ]);
+      const duplicate = findDuplicateKnowledgeNode({ label, node_type: nodeType, source_url: sourceUrl }, [...sourceMatches, ...identityMatches]);
+      if (duplicate) return json({ error: "A knowledge node with the same source or label/type already exists.", duplicate_node_id: duplicate.id }, 409);
       const rows = await rest(ctx, "nexus_knowledge_nodes", "POST", {
         created_by: ctx.user.id, label, node_type: nodeType, description, source_url: sourceUrl,
         source_title: provenance.source_title,
