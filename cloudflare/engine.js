@@ -4,6 +4,7 @@ import { compareBenchmarkResults } from "./benchmark-comparison.js";
 import { createExperimentFingerprint } from "./experiment-fingerprint.js";
 import { normalizeSourceProvenance } from "./source-provenance.js";
 import { buildContradictionReviewQueue } from "./contradiction-queue.js";
+import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
 
 const MAX_BODY = 16000;
 
@@ -98,6 +99,28 @@ export async function handleEngineRequest(request, env) {
         suite_version: BENCHMARK_SUITE_VERSION,
         cases: getBenchmarkSuite(),
         note: "Curated server-maintained benchmark cases. Use these as the default evaluation suite; custom cases remain available for additional experiments."
+      });
+    }
+
+    if (route === "knowledge/traverse" && request.method === "GET") {
+      const startNodeId = url.searchParams.get("start_node_id") || "";
+      if (!/^[0-9a-f-]{36}$/i.test(startNodeId)) {
+        return json({ error: "A valid start_node_id UUID is required." }, 400);
+      }
+      const maxDepth = Math.max(1, Math.min(3, Number.parseInt(url.searchParams.get("max_depth") || "2", 10) || 2));
+      const maxNodes = Math.max(1, Math.min(100, Number.parseInt(url.searchParams.get("max_nodes") || "50", 10) || 50));
+      const [startRows, edges] = await Promise.all([
+        rest(ctx, "nexus_knowledge_nodes?id=eq." + encodeURIComponent(startNodeId) + "&select=id,label,node_type,description,confidence&limit=1"),
+        rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc&limit=500")
+      ]);
+      if (!Array.isArray(startRows) || !startRows.length) return json({ error: "Start knowledge node was not found." }, 404);
+      const traversal = traverseKnowledgeGraph(edges, startNodeId, maxDepth, maxNodes);
+      const ids = [...new Set([startNodeId, ...traversal.nodes.map(node => node.id)])];
+      const nodes = await rest(ctx, "nexus_knowledge_nodes?select=id,label,node_type,description,confidence,source_url,source_title&id=in.(" + ids.map(encodeURIComponent).join(",") + ")");
+      return json({
+        success: true,
+        traversal: { ...traversal, nodes: nodes.map(node => ({ ...node, depth: node.id === startNodeId ? 0 : traversal.nodes.find(item => item.id === node.id)?.depth ?? null })) },
+        note: "Traversal is outgoing-edge only and bounded by depth, node count, and a 500-edge snapshot."
       });
     }
 
