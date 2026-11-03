@@ -173,3 +173,14 @@ test("knowledge edge route rejects malformed provenance before database writes",
     mock.restore();
   }
 });
+
+test("verification route rejects a malformed evaluation identifier", async () => {
+  const mock = mockSupabase([]);
+  try {
+    const response = await handleEngineRequest(new Request("https://nexus.test/api/engine/evaluations/bad/verify", {
+      headers: { Authorization: "Bearer test-session" }
+    }), { SUPABASE_URL: "https://supabase.test", SUPABASE_PUBLISHABLE_KEY: "test-key" });
+    assert.equal(response.status, 400);
+    assert.equal(mock.calls.some(call => call.url.includes("/rest/v1/nexus_evaluations")), false);
+  } finally { mock.restore(); }
+});
