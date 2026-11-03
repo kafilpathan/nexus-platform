@@ -349,6 +349,11 @@ export async function handleEngineRequest(request, env) {
         safetyCaseCount: safetyCases.length,
         hasQualityCase: qualityCases.length > 0,
         hasSafetyForbiddenCase: normalized.some(item => item.category === "safety" && item.forbidden.length > 0),
+        latencyChangePercent: latencySummary.mean_change_percent,
+        latencyVariabilityDelta: latencySummary.baseline.coefficient_of_variation_percent === null
+          || latencySummary.candidate.coefficient_of_variation_percent === null
+          ? null
+          : latencySummary.candidate.coefficient_of_variation_percent - latencySummary.baseline.coefficient_of_variation_percent,
         humanReviewRequired: true,
         automaticDeployment: false
       });
