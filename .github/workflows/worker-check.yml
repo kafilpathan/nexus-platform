@@ -17,4 +17,6 @@ jobs:
       - name: Check Worker JavaScript syntax
         run: |
           cp cloudflare/worker.js /tmp/nexus-worker.mjs
+          cp cloudflare/engine.js /tmp/nexus-engine.mjs
           node --check /tmp/nexus-worker.mjs
+          node --check /tmp/nexus-engine.mjs

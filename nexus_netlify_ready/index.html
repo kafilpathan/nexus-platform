@@ -1209,6 +1209,44 @@ document.getElementById('copySubmission').addEventListener('click', async functi
 <button type="button" id="nexusAdminRefresh">Refresh</button>
 <button type="button" id="nexusAdminLogout">Log out</button>
 <div id="nexusAdminList"></div>
+<section id="nexusEngineAdmin" class="nexus-admin-item" style="margin-top:18px">
+ <h3>NEXUS Evolution & Knowledge Engine</h3>
+ <p>Admin-only research workspace. Experiments require evaluation and explicit human approval; no automatic production changes.</p>
+ <button type="button" id="nexusEngineRefresh">Refresh engine</button>
+ <p id="nexusEngineStatus" role="status">Sign in as an admin to load engine data.</p>
+ <h4>Create an experiment proposal</h4>
+ <label for="nexusEngineName">Experiment name</label>
+ <input id="nexusEngineName" maxlength="120" placeholder="e.g. Memory retrieval ranking v2">
+ <label for="nexusEngineObjective">Objective</label>
+ <input id="nexusEngineObjective" maxlength="1200" placeholder="What measurable improvement should this test?">
+ <button type="button" id="nexusEngineCreate">Create proposal</button>
+ <h4>Record evaluation results</h4>
+ <label for="nexusEvalExperiment">Experiment ID (optional)</label>
+ <input id="nexusEvalExperiment" maxlength="36" placeholder="Paste experiment UUID">
+ <label for="nexusEvalQuality">Quality score (0–1)</label>
+ <input id="nexusEvalQuality" type="number" min="0" max="1" step="0.01" value="0.85">
+ <label for="nexusEvalSafety">Safety score (0–1)</label>
+ <input id="nexusEvalSafety" type="number" min="0" max="1" step="0.01" value="0.98">
+ <label for="nexusEvalRegressions">Regression count</label>
+ <input id="nexusEvalRegressions" type="number" min="0" step="1" value="0">
+ <label for="nexusEvalTests">Test count</label>
+ <input id="nexusEvalTests" type="number" min="1" max="10000" step="1" value="10">
+ <button type="button" id="nexusEngineEvaluate">Save evaluation</button>
+ <h4>Experiments</h4><div id="nexusEngineExperiments"></div>
+ <h4>Knowledge graph — add a node</h4>
+ <label for="nexusNodeLabel">Label</label><input id="nexusNodeLabel" maxlength="160">
+ <label for="nexusNodeType">Node type</label><input id="nexusNodeType" maxlength="40" placeholder="concept, module, source…">
+ <label for="nexusNodeDescription">Description</label><input id="nexusNodeDescription" maxlength="1200">
+ <label for="nexusNodeUrl">HTTPS source URL (optional)</label><input id="nexusNodeUrl" type="url" maxlength="2000">
+ <button type="button" id="nexusEngineAddNode">Add knowledge node</button>
+ <h4>Knowledge nodes</h4><div id="nexusEngineNodes"></div>
+ <h4>Connect two knowledge nodes</h4>
+ <label for="nexusEdgeSource">Source node UUID</label><input id="nexusEdgeSource" maxlength="36">
+ <label for="nexusEdgeTarget">Target node UUID</label><input id="nexusEdgeTarget" maxlength="36">
+ <label for="nexusEdgeRelation">Relationship</label><input id="nexusEdgeRelation" maxlength="60" placeholder="depends_on, supports, improves…">
+ <button type="button" id="nexusEngineAddEdge">Create knowledge link</button>
+ <h4>Knowledge links</h4><div id="nexusEngineEdges"></div>
+</section>
 </section>
 <p id="nexusAdminMsg" role="status"></p>
 </div>
@@ -1312,6 +1350,90 @@ status.setAttribute("aria-label", "Problem status");
   list.replaceChildren();
   say("Logged out.");
  };
+})();
+</script>
+
+<script>
+(() => {
+ const root=document.getElementById("nexusEngineAdmin");
+ if(!root||root.dataset.ready==="1")return;
+ root.dataset.ready="1";
+ const API="https://nexus-kaf-ai.kumarchotu36553.workers.dev/api/engine/";
+ const $=id=>document.getElementById(id);
+ const status=$("nexusEngineStatus");
+ const experiments=$("nexusEngineExperiments");
+ const nodes=$("nexusEngineNodes");const edges=$("nexusEngineEdges");
+ let sessionToken=null;
+ async function token(){
+  const db=window.nexusSupabaseClient;
+  if(!db)throw new Error("Supabase client unavailable.");
+  const {data,error}=await db.auth.getSession();
+  if(error||!data.session?.access_token)throw new Error("Sign in through Admin Login first.");
+  sessionToken=data.session.access_token;return sessionToken;
+ }
+ async function call(path,method="GET",body=null){
+  const access=await token();
+  const response=await fetch(API+path,{method,headers:{"Accept":"application/json","Content-Type":"application/json","Authorization":"Bearer "+access},body:body?JSON.stringify(body):undefined});
+  let data;try{data=await response.json();}catch(_){throw new Error("Engine returned an unreadable response.");}
+  if(!response.ok||data.success===false)throw new Error(data.error||"Engine request failed.");
+  return data;
+ }
+ function text(tag,value){const el=document.createElement(tag);el.textContent=value==null?"":String(value);return el;}
+ async function refresh(){
+  status.textContent="Loading secure engine data…";
+  try{
+   const data=await call("overview");
+   status.textContent="Loaded "+data.counts.experiments+" experiments, "+data.counts.knowledgeNodes+" knowledge nodes and "+data.counts.evaluations+" evaluations. "+data.governance;
+   experiments.replaceChildren();
+   (data.experiments||[]).forEach(item=>{
+    const card=text("article", "");card.className="nexus-admin-item";
+    card.append(text("strong",item.name+" · "+item.status),text("p",item.objective),text("small","ID: "+item.id));
+    if(item.status==="eligible_for_review"){
+     const approve=text("button","Approve");const reject=text("button","Reject");
+     approve.onclick=()=>review(item.id,"approve");reject.onclick=()=>review(item.id,"reject");
+     card.append(approve,reject);
+    }
+    const use=text("button","Use ID for evaluation");use.onclick=()=>{$("nexusEvalExperiment").value=item.id;};
+    card.append(use);experiments.append(card);
+   });
+   nodes.replaceChildren();
+   edges.replaceChildren();(data.edges||[]).forEach(item=>{const card=text("article",item.relation_type+" · confidence "+item.confidence);card.className="nexus-admin-item";card.append(text("small",item.source_node_id+" → "+item.target_node_id));edges.append(card);});
+   (data.nodes||[]).forEach(item=>{
+    const card=text("article",item.label+" · "+item.node_type+" · confidence "+item.confidence);
+    card.className="nexus-admin-item";card.append(text("p",item.description),text("small","ID: "+item.id));
+    if(item.source_url){const link=text("a",item.source_title||item.source_url);link.href=item.source_url;link.target="_blank";link.rel="noopener noreferrer";card.append(link);}
+    nodes.append(card);
+   });
+  }catch(error){status.textContent="Engine unavailable: "+error.message;}
+ }
+ async function review(id,decision){
+  try{await call("experiments/review","POST",{id,decision});status.textContent="Human review recorded: "+decision+".";await refresh();}
+  catch(error){status.textContent="Review failed: "+error.message;}
+ }
+ $("nexusEngineRefresh").onclick=refresh;
+ $("nexusEngineCreate").onclick=async()=>{
+  const name=$("nexusEngineName").value.trim(),objective=$("nexusEngineObjective").value.trim();
+  if(!name||!objective){status.textContent="Enter an experiment name and objective.";return;}
+  try{const result=await call("experiments","POST",{name,objective,parameters:{source:"admin-dashboard"}});$("nexusEngineName").value="";$("nexusEngineObjective").value="";$("nexusEvalExperiment").value=result.experiment?.id||"";status.textContent="Proposal created. Run tests before requesting review.";await refresh();}
+  catch(error){status.textContent="Could not create proposal: "+error.message;}
+ };
+ $("nexusEngineEvaluate").onclick=async()=>{
+  const quality=Number($("nexusEvalQuality").value),safety=Number($("nexusEvalSafety").value),regressions=Number($("nexusEvalRegressions").value),tests=Number($("nexusEvalTests").value);
+  try{const result=await call("evaluate","POST",{experiment_id:$("nexusEvalExperiment").value.trim()||null,metrics:{quality_score:quality,safety_score:safety,regression_count:regressions,test_count:tests},summary:"Admin-submitted evaluation metrics."});status.textContent=result.passed?"Thresholds met; experiment is awaiting human approval.":"Evaluation saved; thresholds not met.";await refresh();}
+  catch(error){status.textContent="Evaluation failed: "+error.message;}
+ };
+ $("nexusEngineAddNode").onclick=async()=>{
+  const label=$("nexusNodeLabel").value.trim(),node_type=$("nexusNodeType").value.trim(),description=$("nexusNodeDescription").value.trim(),source_url=$("nexusNodeUrl").value.trim()||null;
+  try{await call("knowledge/nodes","POST",{label,node_type,description,source_url,confidence:0.7,provenance:{created_via:"admin-dashboard"}});$("nexusNodeLabel").value="";$("nexusNodeType").value="";$("nexusNodeDescription").value="";$("nexusNodeUrl").value="";status.textContent="Knowledge node added.";await refresh();}
+  catch(error){status.textContent="Could not add node: "+error.message;}
+ };
+ $("nexusEngineAddEdge").onclick=async()=>{
+  const source_node_id=$("nexusEdgeSource").value.trim(),target_node_id=$("nexusEdgeTarget").value.trim(),relation_type=$("nexusEdgeRelation").value.trim();
+  try{await call("knowledge/edges","POST",{source_node_id,target_node_id,relation_type,confidence:0.7,provenance:{created_via:"admin-dashboard"}});status.textContent="Knowledge link created.";await refresh();}
+  catch(error){status.textContent="Could not create link: "+error.message;}
+ };
+ const db=window.nexusSupabaseClient;
+ if(db)db.auth.onAuthStateChange(event=>{if(event==="SIGNED_IN")Promise.resolve().then(refresh);});
 })();
 </script>
 
