@@ -1,6 +1,6 @@
 export const EVALUATION_SUITE_VERSION = "evolution-v3";
 
-const escapeRegExp = value => value.replace(/[.*+?^$()|[\\]\\\\{}]/g, "\\$&");
+const escapeRegExp = value => value.split("").map(char => "\\\\^$.*+?()[]{}|".includes(char) ? "\\\\" + char : char).join("");
 
 function containsExpectedSignal(answer, signal) {
   const term = String(signal ?? "").trim().toLowerCase().replace(/\s+/g, " ");
