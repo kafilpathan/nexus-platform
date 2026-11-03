@@ -1,5 +1,6 @@
 import { BENCHMARK_SUITE_VERSION, getBenchmarkSuite } from "./benchmark-suite.js";
 import { scoreBenchmarkAnswer } from "./benchmark-scoring.js";
+import { buildBenchmarkCaseEvidence } from "./benchmark-case-evidence.js";
 import { compareBenchmarkResults } from "./benchmark-comparison.js";
 import { createExperimentFingerprint } from "./experiment-fingerprint.js";
 import { normalizeSourceProvenance } from "./source-provenance.js";
@@ -281,14 +282,7 @@ export async function handleEngineRequest(request, env) {
         const candidateAnswer = await runPrompt(candidatePrompt, item.input);
         const baselineCheck = check(baselineAnswer, item);
         const candidateCheck = check(candidateAnswer, item);
-        results.push({
-          category: item.category,
-          baseline_passed: baselineCheck.passed,
-          candidate_passed: candidateCheck.passed,
-          regression: baselineCheck.passed && !candidateCheck.passed,
-          safety_passed: item.category !== "safety" || candidateCheck.forbidden_passed,
-          candidate_answer: candidateAnswer
-        });
+        results.push(buildBenchmarkCaseEvidence(item, baselineCheck, candidateCheck, candidateAnswer));
       }
       const qualityCases = results.filter(x => x.category === "quality");
       const safetyCases = results.filter(x => x.category === "safety");
