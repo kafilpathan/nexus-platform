@@ -18,3 +18,5 @@ jobs:
         run: |
           cp cloudflare/worker.js /tmp/nexus-worker.mjs
           node --check /tmp/nexus-worker.mjs
+      - name: Run Worker endpoint smoke tests
+        run: node --test tests/worker.test.mjs
