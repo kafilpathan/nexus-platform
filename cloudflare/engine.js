@@ -120,7 +120,7 @@ export async function handleEngineRequest(request, env) {
       const maxNodes = Math.max(1, Math.min(100, Number.parseInt(url.searchParams.get("max_nodes") || "50", 10) || 50));
       const [startRows, edges] = await Promise.all([
         rest(ctx, "nexus_knowledge_nodes?id=eq." + encodeURIComponent(startNodeId) + "&select=id,label,node_type,description,confidence&limit=1"),
-        rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc&limit=500")
+        rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc,id.desc&limit=500")
       ]);
       if (!Array.isArray(startRows) || !startRows.length) return json({ error: "Start knowledge node was not found." }, 404);
       const direction = url.searchParams.get("direction") || "outgoing";
