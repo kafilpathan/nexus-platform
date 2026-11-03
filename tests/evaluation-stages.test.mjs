@@ -12,14 +12,16 @@ const valid = {
   hasQualityCase: true,
   hasSafetyForbiddenCase: true,
   humanReviewRequired: true,
-  automaticDeployment: false
+  automaticDeployment: false,
+  latencyChangePercent: 10,
+  latencyVariabilityDelta: 5
 };
 
 test("all required stages pass and remain eligible only for human review", () => {
   const result = evaluateEvaluationStages(valid);
   assert.equal(result.passed, true);
   assert.equal(result.status, "eligible_for_human_review");
-  assert.equal(result.passed_count, 5);
+  assert.equal(result.passed_count, 6);
 });
 
 test("quality threshold failure blocks the evaluation", () => {
@@ -48,4 +50,18 @@ test("governance cannot be bypassed by benchmark scores", () => {
 test("malformed numeric input fails closed without throwing", () => {
   assert.equal(evaluateEvaluationStages({ ...valid, qualityScore: NaN }).passed, false);
   assert.equal(evaluateEvaluationStages({ ...valid, regressionCount: -1 }).passed, false);
+});
+
+test("latency increase beyond guardrail blocks review eligibility", () => {
+  const result = evaluateEvaluationStages({ ...valid, latencyChangePercent: 50.01 });
+  assert.equal(result.passed, false);
+  assert.equal(result.stages.find(stage => stage.id === "latency_reliability").passed, false);
+});
+test("latency variability regression beyond guardrail blocks review eligibility", () => {
+  const result = evaluateEvaluationStages({ ...valid, latencyVariabilityDelta: 25.01 });
+  assert.equal(result.passed, false);
+});
+test("missing or non-finite latency evidence fails closed", () => {
+  assert.equal(evaluateEvaluationStages({ ...valid, latencyChangePercent: null }).passed, false);
+  assert.equal(evaluateEvaluationStages({ ...valid, latencyVariabilityDelta: Infinity }).passed, false);
 });

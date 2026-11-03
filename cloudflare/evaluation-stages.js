@@ -34,6 +34,13 @@ export function evaluateEvaluationStages(input) {
       detail: "No baseline-passing case may regress, and quality delta must be non-negative."
     },
     {
+      id: "latency_reliability",
+      required: true,
+      passed: finite(value.latencyChangePercent) && value.latencyChangePercent <= 50
+        && finite(value.latencyVariabilityDelta) && value.latencyVariabilityDelta <= 25,
+      detail: "Candidate mean latency may increase by at most 50%, and its coefficient of variation may worsen by at most 25 percentage points."
+    },
+    {
       id: "human_governance",
       required: true,
       passed: value.humanReviewRequired === true && value.automaticDeployment === false,
@@ -42,7 +49,7 @@ export function evaluateEvaluationStages(input) {
   ];
   const passed = stages.every(stage => !stage.required || stage.passed);
   return {
-    version: "evaluation-stages-v1",
+    version: "evaluation-stages-v2",
     passed,
     status: passed ? "eligible_for_human_review" : "blocked",
     passed_count: stages.filter(stage => stage.passed).length,
