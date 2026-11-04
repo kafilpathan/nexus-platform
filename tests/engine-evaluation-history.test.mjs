@@ -225,3 +225,20 @@ test("knowledge node route rejects empty confidence before database lookup", asy
     mock.restore();
   }
 });
+
+test("knowledge traversal rejects malformed limits before database reads", async () => {
+  const mock = mockSupabase([]);
+  try {
+    const request = new Request("https://nexus.test/api/engine/knowledge/traverse?start_node_id=123e4567-e89b-42d3-a456-426614174000&max_depth=2abc", {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 400);
+    assert.equal(mock.calls.some(call => call.url.includes("/rest/v1/nexus_knowledge_nodes") || call.url.includes("/rest/v1/nexus_knowledge_edges")), false);
+  } finally {
+    mock.restore();
+  }
+});
