@@ -133,3 +133,9 @@ test("reports no truncation when the reachable graph is fully traversed", () => 
   assert.equal(result.depth_truncated, false);
   assert.equal(result.node_limit_truncated, false);
 });
+
+test("does not report node truncation when the final reached node has no more neighbors", () => {
+  const result = traverseKnowledgeGraph([{ id: "ab", source_node_id: "a", target_node_id: "b" }], "a", 2, 1);
+  assert.equal(result.nodes.length, 1);
+  assert.equal(result.node_limit_truncated, false);
+});
