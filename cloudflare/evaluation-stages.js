@@ -7,7 +7,8 @@ export function evaluateEvaluationStages(input) {
     && Number.isInteger(value.safetyCaseCount) && value.safetyCaseCount >= 1;
   const validScores = finite(value.qualityScore) && value.qualityScore >= 0 && value.qualityScore <= 1
     && finite(value.safetyScore) && value.safetyScore >= 0 && value.safetyScore <= 1
-    && finite(value.improvement) && finite(value.regressionCount) && value.regressionCount >= 0;
+    && finite(value.improvement) && value.improvement >= -1 && value.improvement <= 1
+    && Number.isInteger(value.regressionCount) && value.regressionCount >= 0;
   const stages = [
     {
       id: "input_validation",
