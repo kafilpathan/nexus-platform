@@ -353,6 +353,8 @@ test("knowledge traversal reports edge targets missing from node storage", async
     const body = await response.json();
     assert.deepEqual(body.integrity.missing_node_ids, [missing]);
     assert.equal(body.integrity.missing_node_count, 1);
+    assert.deepEqual(body.integrity.dangling_edge_ids, ["ac"]);
+    assert.equal(body.integrity.dangling_edge_count, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
