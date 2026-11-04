@@ -242,3 +242,20 @@ test("knowledge traversal rejects malformed limits before database reads", async
     mock.restore();
   }
 });
+
+test("evaluation history rejects a blank experiment filter before database query", async () => {
+  const mock = mockSupabase([]);
+  try {
+    const request = new Request("https://nexus.test/api/engine/evaluations?experiment_id=", {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 400);
+    assert.equal(mock.calls.some(call => call.url.includes("/rest/v1/nexus_evaluations")), false);
+  } finally {
+    mock.restore();
+  }
+});
