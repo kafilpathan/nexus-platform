@@ -355,6 +355,41 @@ test("knowledge traversal reports edge targets missing from node storage", async
     assert.equal(body.integrity.missing_node_count, 1);
     assert.deepEqual(body.integrity.dangling_edge_ids, ["ac"]);
     assert.equal(body.integrity.dangling_edge_count, 1);
+    assert.equal(body.integrity.edge_snapshot_limit, 500);
+    assert.equal(body.integrity.edge_snapshot_may_be_truncated, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("knowledge traversal flags a full 500-edge snapshot as potentially truncated", async () => {
+  const originalFetch = globalThis.fetch;
+  const start = "123e4567-e89b-42d3-a456-426614174000";
+  const ids = Array.from({ length: 500 }, (_, i) => "123e4567-e89b-42d3-a456-" + (i + 1).toString(16).padStart(12, "0"));
+  const edges = ids.map((id, i) => ({ id: "edge-" + i, source_node_id: start, target_node_id: id, relation_type: "supports", confidence: 0.8 }));
+  const rows = [{ id: start, label: "start", node_type: "concept", description: "", confidence: 1 },
+    ...ids.slice(0, 50).map(id => ({ id, label: id, node_type: "concept", description: "", confidence: 0.8 }))];
+  globalThis.fetch = async url => {
+    const target = String(url);
+    if (target.endsWith("/auth/v1/user")) return new Response(JSON.stringify({ id: adminId }), { status: 200 });
+    if (target.includes("/rest/v1/nexus_admins")) return new Response(JSON.stringify([{ user_id: adminId }]), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_edges?")) return new Response(JSON.stringify(edges), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_nodes?id=eq.")) return new Response(JSON.stringify([rows[0]]), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_nodes?select=")) return new Response(JSON.stringify(rows), { status: 200 });
+    throw new Error("Unexpected request: " + target);
+  };
+  try {
+    const request = new Request("https://nexus.test/api/engine/knowledge/traverse?start_node_id=" + start, {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.integrity.edge_snapshot_limit, 500);
+    assert.equal(body.integrity.edge_snapshot_may_be_truncated, true);
   } finally {
     globalThis.fetch = originalFetch;
   }
