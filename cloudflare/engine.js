@@ -175,6 +175,12 @@ export async function handleEngineRequest(request, env) {
         results: evidence.results
       };
       const aggregateVerified = await verifyEvidenceIntegrityManifest(payload, manifest);
+      let actualSha256 = null;
+      try {
+        actualSha256 = (await createEvidenceIntegrityManifest(payload)).sha256;
+      } catch (_) {
+        actualSha256 = null;
+      }
       const perCaseIntegrity = evidence.per_case_integrity
         ? await verifyPerCaseIntegrityManifests(evidence.results, evidence.per_case_integrity)
         : null;
@@ -187,6 +193,8 @@ export async function handleEngineRequest(request, env) {
         algorithm: manifest.algorithm,
         canonicalization: manifest.canonicalization,
         expected_sha256: manifest.sha256,
+        actual_sha256: actualSha256,
+        sha256_match: actualSha256 !== null && actualSha256 === manifest.sha256,
         byte_length: manifest.byte_length,
         checked_at: new Date().toISOString(),
         reason: verified ? null : "Stored evaluation evidence does not match its aggregate or per-case integrity manifest."

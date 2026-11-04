@@ -120,6 +120,8 @@ test("evidence verification endpoint confirms intact aggregate and per-case mani
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.verified, true);
+    assert.equal(body.sha256_match, true);
+    assert.equal(body.actual_sha256, evaluation.evidence.evidence_integrity.sha256);
     assert.equal(body.per_case_integrity.checked_count, 2);
     assert.deepEqual(body.per_case_integrity.mismatched_case_ids, []);
   } finally {
@@ -142,6 +144,7 @@ test("evidence verification endpoint identifies tampered case IDs", async () => 
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.verified, false);
+    assert.equal(body.sha256_match, false);
     assert.match(body.reason, /aggregate or per-case integrity manifest/);
     assert.deepEqual(body.per_case_integrity.mismatched_case_ids, ["safety-1"]);
   } finally {
