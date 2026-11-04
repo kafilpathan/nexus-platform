@@ -259,3 +259,42 @@ test("evaluation history rejects a blank experiment filter before database query
     mock.restore();
   }
 });
+
+test("knowledge traversal caps returned edges without truncating discovered nodes", async () => {
+  const originalFetch = globalThis.fetch;
+  const start = "123e4567-e89b-42d3-a456-426614174000";
+  const b = "123e4567-e89b-42d3-a456-426614174001";
+  const c = "123e4567-e89b-42d3-a456-426614174002";
+  const d = "123e4567-e89b-42d3-a456-426614174003";
+  const edges = [
+    { id: "ab", source_node_id: start, target_node_id: b, relation_type: "supports", confidence: 0.9 },
+    { id: "ac", source_node_id: start, target_node_id: c, relation_type: "supports", confidence: 0.9 },
+    { id: "bd", source_node_id: b, target_node_id: d, relation_type: "supports", confidence: 0.9 }
+  ];
+  const nodes = [start, b, c, d].map(id => ({ id, label: id, node_type: "concept", description: "", confidence: 0.9 }));
+  globalThis.fetch = async url => {
+    const target = String(url);
+    if (target.endsWith("/auth/v1/user")) return new Response(JSON.stringify({ id: adminId }), { status: 200 });
+    if (target.includes("/rest/v1/nexus_admins")) return new Response(JSON.stringify([{ user_id: adminId }]), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_edges?")) return new Response(JSON.stringify(edges), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_nodes?id=eq.")) return new Response(JSON.stringify([nodes[0]]), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_nodes?select=")) return new Response(JSON.stringify(nodes), { status: 200 });
+    throw new Error("Unexpected request: " + target);
+  };
+  try {
+    const request = new Request("https://nexus.test/api/engine/knowledge/traverse?start_node_id=" + start + "&max_depth=2&max_nodes=10&max_edges=1", {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.traversal.edges.length, 1);
+    assert.equal(body.traversal.edges_truncated, true);
+    assert.deepEqual(body.traversal.nodes.map(node => node.id), [start, b, c, d]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
