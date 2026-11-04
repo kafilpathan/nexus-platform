@@ -109,3 +109,33 @@ test("rejects invalid edge output bounds", () => {
   assert.throws(() => traverseKnowledgeGraph([], "a", 1, 10, { maxEdges: 0 }), TypeError);
   assert.throws(() => traverseKnowledgeGraph([], "a", 1, 10, { maxEdges: 501 }), TypeError);
 });
+
+test("reports when the depth limit hides further reachable nodes", () => {
+  const edges = [
+    { id: "ab", source_node_id: "a", target_node_id: "b" },
+    { id: "bc", source_node_id: "b", target_node_id: "c" }
+  ];
+  const result = traverseKnowledgeGraph(edges, "a", 1, 10);
+  assert.equal(result.depth_truncated, true);
+  assert.equal(result.node_limit_truncated, false);
+});
+test("reports when the node limit prevents processing the remaining frontier", () => {
+  const edges = [
+    { id: "ab", source_node_id: "a", target_node_id: "b" },
+    { id: "ac", source_node_id: "a", target_node_id: "c" }
+  ];
+  const result = traverseKnowledgeGraph(edges, "a", 3, 1);
+  assert.equal(result.node_limit_truncated, true);
+  assert.equal(result.nodes.length, 1);
+});
+test("reports no truncation when the reachable graph is fully traversed", () => {
+  const result = traverseKnowledgeGraph([{ id: "ab", source_node_id: "a", target_node_id: "b" }], "a", 2, 10);
+  assert.equal(result.depth_truncated, false);
+  assert.equal(result.node_limit_truncated, false);
+});
+
+test("does not report node truncation when the final reached node has no more neighbors", () => {
+  const result = traverseKnowledgeGraph([{ id: "ab", source_node_id: "a", target_node_id: "b" }], "a", 2, 1);
+  assert.equal(result.nodes.length, 1);
+  assert.equal(result.node_limit_truncated, false);
+});

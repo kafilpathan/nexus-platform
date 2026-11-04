@@ -32,10 +32,17 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
   const traversed = [];
   const traversedEdgeKeys = new Set();
   let edgesTruncated = false;
+  let depthTruncated = false;
+  let nodeLimitTruncated = false;
   while (frontier.length && reached.length < nodeLimit) {
     const current = frontier.shift();
-    if (current.depth >= depthLimit) continue;
-    for (const neighbor of adjacency.get(current.id) || []) {
+    if (current.depth >= depthLimit) {
+      if ((adjacency.get(current.id) || []).some(neighbor => !visited.has(neighbor.nextId))) depthTruncated = true;
+      continue;
+    }
+    const neighbors = adjacency.get(current.id) || [];
+    for (let neighborIndex = 0; neighborIndex < neighbors.length; neighborIndex += 1) {
+      const neighbor = neighbors[neighborIndex];
       const { edge, nextId, viaDirection } = neighbor;
       const edgeKey = typeof edge.id === "string" && edge.id
         ? edge.id
@@ -50,8 +57,12 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
       const item = { id: nextId, depth: current.depth + 1, via_edge_id: edge.id ?? null, via_direction: viaDirection };
       reached.push(item);
       frontier.push(item);
-      if (reached.length >= nodeLimit) break;
+      if (reached.length >= nodeLimit) {
+        if (neighbors.slice(neighborIndex + 1).some(pending => !visited.has(pending.nextId))) nodeLimitTruncated = true;
+        break;
+      }
     }
   }
-  return { start_node_id: startNodeId, max_depth: depthLimit, max_edges: maxEdges, edges_truncated: edgesTruncated, direction, relation_type: relation, min_confidence: minConfidence, nodes: reached, edges: traversed };
+  if (reached.length >= nodeLimit && frontier.some(item => (adjacency.get(item.id) || []).some(neighbor => !visited.has(neighbor.nextId)))) nodeLimitTruncated = true;
+  return { start_node_id: startNodeId, max_depth: depthLimit, max_edges: maxEdges, edges_truncated: edgesTruncated, depth_truncated: depthTruncated, node_limit_truncated: nodeLimitTruncated, direction, relation_type: relation, min_confidence: minConfidence, nodes: reached, edges: traversed };
 }
