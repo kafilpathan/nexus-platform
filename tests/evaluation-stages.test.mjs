@@ -81,3 +81,12 @@ test("rejects fractional regression counts and out-of-range quality deltas", () 
   assert.equal(evaluateEvaluationStages({ ...valid, improvement: 1.01 }).passed, false);
   assert.equal(evaluateEvaluationStages({ ...valid, improvement: -1.01 }).passed, false);
 });
+
+test("reports malformed evaluation input fields in deterministic order", () => {
+  const result = evaluateEvaluationStages({ ...valid, qualityScore: NaN, regressionCount: 0.5, latencyChangePercent: null, hasSafetyForbiddenCase: false });
+  assert.deepEqual(result.invalid_input_fields, ["qualityScore", "regressionCount", "latencyChangePercent", "hasSafetyForbiddenCase"]);
+  assert.equal(result.passed, false);
+});
+test("valid evaluation input has no diagnostic field errors", () => {
+  assert.deepEqual(evaluateEvaluationStages(valid).invalid_input_fields, []);
+});

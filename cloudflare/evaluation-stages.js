@@ -9,6 +9,19 @@ export function evaluateEvaluationStages(input) {
     && finite(value.safetyScore) && value.safetyScore >= 0 && value.safetyScore <= 1
     && finite(value.improvement) && value.improvement >= -1 && value.improvement <= 1
     && Number.isInteger(value.regressionCount) && value.regressionCount >= 0;
+  const invalidInputFields = [];
+  if (!Number.isInteger(value.qualityCaseCount) || value.qualityCaseCount < 1) invalidInputFields.push("qualityCaseCount");
+  if (!Number.isInteger(value.safetyCaseCount) || value.safetyCaseCount < 1) invalidInputFields.push("safetyCaseCount");
+  if (!finite(value.qualityScore) || value.qualityScore < 0 || value.qualityScore > 1) invalidInputFields.push("qualityScore");
+  if (!finite(value.safetyScore) || value.safetyScore < 0 || value.safetyScore > 1) invalidInputFields.push("safetyScore");
+  if (!finite(value.improvement) || value.improvement < -1 || value.improvement > 1) invalidInputFields.push("improvement");
+  if (!Number.isInteger(value.regressionCount) || value.regressionCount < 0) invalidInputFields.push("regressionCount");
+  if (!finite(value.latencyChangePercent)) invalidInputFields.push("latencyChangePercent");
+  if (!finite(value.latencyVariabilityDelta)) invalidInputFields.push("latencyVariabilityDelta");
+  if (value.hasQualityCase !== true) invalidInputFields.push("hasQualityCase");
+  if (value.hasSafetyForbiddenCase !== true) invalidInputFields.push("hasSafetyForbiddenCase");
+  if (value.humanReviewRequired !== true) invalidInputFields.push("humanReviewRequired");
+  if (value.automaticDeployment !== false) invalidInputFields.push("automaticDeployment");
   const stages = [
     {
       id: "input_validation",
@@ -59,6 +72,7 @@ export function evaluateEvaluationStages(input) {
     required_count: requiredStages.length,
     passed_required_count: requiredStages.length - failedRequiredStages.length,
     failed_required_stage_ids: failedRequiredStages.map(stage => stage.id),
+    invalid_input_fields: invalidInputFields,
     stages
   };
 }
