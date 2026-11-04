@@ -2,6 +2,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 export function parseEvaluationPagination(params) {
   const rawLimit = params.get("limit");
   const rawOffset = params.get("offset");
+  if (rawLimit !== null && !rawLimit.trim()) return { valid: false, error: "limit must be an integer between 1 and 100." };
+  if (rawOffset !== null && !rawOffset.trim()) return { valid: false, error: "offset must be an integer between 0 and 10000." };
   const limit = rawLimit === null ? 20 : Number(rawLimit);
   const offset = rawOffset === null ? 0 : Number(rawOffset);
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) return { valid: false, error: "limit must be an integer between 1 and 100." };

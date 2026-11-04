@@ -18,3 +18,9 @@ test("rejects out-of-range pagination and malformed filters", () => {
     new URLSearchParams({ experiment_id: "not-a-uuid" })
   ]) assert.equal(parseEvaluationPagination(params).valid, false);
 });
+
+test("rejects explicitly blank limit and offset values", () => {
+  assert.equal(parseEvaluationPagination(new URLSearchParams({ limit: "" })).valid, false);
+  assert.equal(parseEvaluationPagination(new URLSearchParams({ offset: "" })).valid, false);
+  assert.equal(parseEvaluationPagination(new URLSearchParams({ offset: "   " })).valid, false);
+});
