@@ -32,9 +32,14 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
   const traversed = [];
   const traversedEdgeKeys = new Set();
   let edgesTruncated = false;
+  let depthTruncated = false;
+  let nodeLimitTruncated = false;
   while (frontier.length && reached.length < nodeLimit) {
     const current = frontier.shift();
-    if (current.depth >= depthLimit) continue;
+    if (current.depth >= depthLimit) {
+      if ((adjacency.get(current.id) || []).length > 0) depthTruncated = true;
+      continue;
+    }
     for (const neighbor of adjacency.get(current.id) || []) {
       const { edge, nextId, viaDirection } = neighbor;
       const edgeKey = typeof edge.id === "string" && edge.id
@@ -53,5 +58,6 @@ export function traverseKnowledgeGraph(edges, startNodeId, maxDepth = 2, maxNode
       if (reached.length >= nodeLimit) break;
     }
   }
-  return { start_node_id: startNodeId, max_depth: depthLimit, max_edges: maxEdges, edges_truncated: edgesTruncated, direction, relation_type: relation, min_confidence: minConfidence, nodes: reached, edges: traversed };
+  if (reached.length >= nodeLimit && frontier.length > 0) nodeLimitTruncated = true;
+  return { start_node_id: startNodeId, max_depth: depthLimit, max_edges: maxEdges, edges_truncated: edgesTruncated, depth_truncated: depthTruncated, node_limit_truncated: nodeLimitTruncated, direction, relation_type: relation, min_confidence: minConfidence, nodes: reached, edges: traversed };
 }
