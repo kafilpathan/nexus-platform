@@ -134,7 +134,7 @@ export async function handleEngineRequest(request, env) {
       return json({
         success: true,
         traversal: { ...traversal, nodes: nodes.map(node => ({ ...node, depth: node.id === startNodeId ? 0 : traversal.nodes.find(item => item.id === node.id)?.depth ?? null })) },
-        integrity: { missing_node_ids: missingNodeIds, missing_node_count: missingNodeIds.length, dangling_edge_ids: danglingEdgeIds, dangling_edge_count: danglingEdgeIds.length },
+        integrity: { missing_node_ids: missingNodeIds, missing_node_count: missingNodeIds.length, dangling_edge_ids: danglingEdgeIds, dangling_edge_count: danglingEdgeIds.length, edge_snapshot_limit: 500, edge_snapshot_may_be_truncated: edges.length === 500 },
         note: "Traversal direction, relation type, minimum edge confidence, and returned edge count are filterable; results are bounded by depth, node count, and a 500-edge snapshot."
       });
     }
