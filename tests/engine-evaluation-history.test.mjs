@@ -201,3 +201,27 @@ test("evidence verification returns not found for a valid but unknown ID", async
     mock.restore();
   }
 });
+
+test("knowledge node route rejects empty confidence before database lookup", async () => {
+  const mock = mockSupabase([]);
+  try {
+    const request = new Request("https://nexus.test/api/engine/knowledge/nodes", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-session", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        label: "Validation test node",
+        node_type: "concept",
+        description: "A test node for confidence validation.",
+        confidence: ""
+      })
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 400);
+    assert.equal(mock.calls.some(call => call.url.includes("/rest/v1/nexus_knowledge_nodes")), false);
+  } finally {
+    mock.restore();
+  }
+});

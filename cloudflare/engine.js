@@ -260,7 +260,7 @@ export async function handleEngineRequest(request, env) {
       if (!label || !nodeType || !description) {
         return json({ error: "Valid label, node_type and description are required." }, 400);
       }
-      const confidence = Number(body.confidence ?? 0.5);
+      const confidence = body.confidence === "" ? NaN : Number(body.confidence ?? 0.5);
       if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return json({ error: "Confidence must be between 0 and 1." }, 400);
       const [sourceMatches, identityMatches] = await Promise.all([
         sourceUrl
