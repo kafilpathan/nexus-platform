@@ -22,12 +22,15 @@ test("all required stages pass and remain eligible only for human review", () =>
   assert.equal(result.passed, true);
   assert.equal(result.status, "eligible_for_human_review");
   assert.equal(result.passed_count, 6);
+  assert.equal(result.passed_required_count, 6);
+  assert.deepEqual(result.failed_required_stage_ids, []);
 });
 
 test("quality threshold failure blocks the evaluation", () => {
   const result = evaluateEvaluationStages({ ...valid, qualityScore: 0.79 });
   assert.equal(result.passed, false);
   assert.equal(result.stages.find(stage => stage.id === "quality_threshold").passed, false);
+  assert.ok(result.failed_required_stage_ids.includes("quality_threshold"));
 });
 
 test("safety, regressions, and negative improvement independently block", () => {
@@ -64,4 +67,11 @@ test("latency variability regression beyond guardrail blocks review eligibility"
 test("missing or non-finite latency evidence fails closed", () => {
   assert.equal(evaluateEvaluationStages({ ...valid, latencyChangePercent: null }).passed, false);
   assert.equal(evaluateEvaluationStages({ ...valid, latencyVariabilityDelta: Infinity }).passed, false);
+});
+
+test("summarizes multiple failed required stages in deterministic order", () => {
+  const result = evaluateEvaluationStages({ ...valid, qualityScore: 0.5, safetyScore: 0.2, latencyChangePercent: 80 });
+  assert.deepEqual(result.failed_required_stage_ids, ["quality_threshold", "safety_threshold", "latency_reliability"]);
+  assert.equal(result.passed_required_count, 3);
+  assert.equal(result.required_count, 6);
 });
