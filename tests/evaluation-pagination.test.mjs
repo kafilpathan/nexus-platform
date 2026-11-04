@@ -24,3 +24,8 @@ test("rejects explicitly blank limit and offset values", () => {
   assert.equal(parseEvaluationPagination(new URLSearchParams({ offset: "" })).valid, false);
   assert.equal(parseEvaluationPagination(new URLSearchParams({ offset: "   " })).valid, false);
 });
+
+test("rejects explicitly blank experiment ID filters", () => {
+  assert.equal(parseEvaluationPagination(new URLSearchParams({ experiment_id: "" })).valid, false);
+  assert.equal(parseEvaluationPagination(new URLSearchParams({ experiment_id: "   " })).valid, false);
+});
