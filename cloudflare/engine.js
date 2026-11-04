@@ -11,6 +11,7 @@ import { normalizeSourceProvenance } from "./source-provenance.js";
 import { findDuplicateKnowledgeNode } from "./knowledge-node-integrity.js";
 import { buildContradictionReviewQueue } from "./contradiction-queue.js";
 import { traverseKnowledgeGraph } from "./knowledge-traversal.js";
+import { parseKnowledgeTraversalOptions } from "./knowledge-traversal-options.js";
 import { validateKnowledgeEdge, normalizeKnowledgeEdgeProvenance } from "./knowledge-edge-integrity.js";
 import { evaluateEvaluationStages } from "./evaluation-stages.js";
 import { createEvidenceIntegrityManifest, verifyEvidenceIntegrityManifest, createPerCaseIntegrityManifests, verifyPerCaseIntegrityManifests } from "./evidence-integrity.js";
@@ -116,23 +117,14 @@ export async function handleEngineRequest(request, env) {
       if (!/^[0-9a-f-]{36}$/i.test(startNodeId)) {
         return json({ error: "A valid start_node_id UUID is required." }, 400);
       }
-      const maxDepth = Math.max(1, Math.min(3, Number.parseInt(url.searchParams.get("max_depth") || "2", 10) || 2));
-      const maxNodes = Math.max(1, Math.min(100, Number.parseInt(url.searchParams.get("max_nodes") || "50", 10) || 50));
+      const traversalOptions = parseKnowledgeTraversalOptions(url.searchParams);
+      if (!traversalOptions.valid) return json({ error: traversalOptions.error }, 400);
+      const { maxDepth, maxNodes, direction, relationType, minConfidence } = traversalOptions;
       const [startRows, edges] = await Promise.all([
         rest(ctx, "nexus_knowledge_nodes?id=eq." + encodeURIComponent(startNodeId) + "&select=id,label,node_type,description,confidence&limit=1"),
         rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc,id.desc&limit=500")
       ]);
       if (!Array.isArray(startRows) || !startRows.length) return json({ error: "Start knowledge node was not found." }, 404);
-      const direction = url.searchParams.get("direction") || "outgoing";
-      if (!["outgoing", "incoming", "both"].includes(direction)) return json({ error: "direction must be outgoing, incoming, or both." }, 400);
-      const relationType = url.searchParams.get("relation_type") || null;
-      if (relationType && !/^[a-z][a-z0-9_-]{0,59}$/i.test(relationType)) return json({ error: "Invalid relation_type filter." }, 400);
-      const confidenceParam = url.searchParams.get("min_confidence");
-      if (confidenceParam !== null && !confidenceParam.trim()) return json({ error: "min_confidence must be a number between 0 and 1." }, 400);
-      const minConfidence = confidenceParam === null ? null : Number(confidenceParam);
-      if (minConfidence !== null && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
-        return json({ error: "min_confidence must be a number between 0 and 1." }, 400);
-      }
       const traversal = traverseKnowledgeGraph(edges, startNodeId, maxDepth, maxNodes, { direction, relationType, minConfidence });
       const ids = [...new Set([startNodeId, ...traversal.nodes.map(node => node.id)])];
       const nodes = await rest(ctx, "nexus_knowledge_nodes?select=id,label,node_type,description,confidence,source_url,source_title&id=in.(" + ids.map(encodeURIComponent).join(",") + ")");

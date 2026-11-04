@@ -31,8 +31,9 @@ jobs:
           node --experimental-default-type=module --check cloudflare/knowledge-node-integrity.js
           node --experimental-default-type=module --check cloudflare/contradiction-queue.js
           node --experimental-default-type=module --check cloudflare/knowledge-traversal.js
+          node --experimental-default-type=module --check cloudflare/knowledge-traversal-options.js
           node --experimental-default-type=module --check cloudflare/knowledge-edge-integrity.js
           node --experimental-default-type=module --check cloudflare/evaluation-stages.js
           node --experimental-default-type=module --check cloudflare/evidence-integrity.js
       - name: Run Worker regression tests
-        run: node --experimental-default-type=module --test tests/worker.test.mjs tests/engine-evaluation-history.test.mjs tests/evaluation-pagination.test.mjs tests/benchmark-scoring.test.mjs tests/benchmark-latency.test.mjs tests/benchmark-evidence-summary.test.mjs tests/benchmark-case-schema.test.mjs tests/benchmark-case-evidence.test.mjs tests/benchmark-suite.test.mjs tests/benchmark-comparison.test.mjs tests/experiment-fingerprint.test.mjs tests/source-provenance.test.mjs tests/knowledge-node-integrity.test.mjs tests/contradiction-queue.test.mjs tests/knowledge-traversal.test.mjs tests/knowledge-edge-integrity.test.mjs tests/evaluation-stages.test.mjs tests/evidence-integrity.test.mjs
+        run: node --experimental-default-type=module --test tests/worker.test.mjs tests/engine-evaluation-history.test.mjs tests/evaluation-pagination.test.mjs tests/benchmark-scoring.test.mjs tests/benchmark-latency.test.mjs tests/benchmark-evidence-summary.test.mjs tests/benchmark-case-schema.test.mjs tests/benchmark-case-evidence.test.mjs tests/benchmark-suite.test.mjs tests/benchmark-comparison.test.mjs tests/experiment-fingerprint.test.mjs tests/source-provenance.test.mjs tests/knowledge-node-integrity.test.mjs tests/contradiction-queue.test.mjs tests/knowledge-traversal.test.mjs tests/knowledge-traversal-options.test.mjs tests/knowledge-edge-integrity.test.mjs tests/evaluation-stages.test.mjs tests/evidence-integrity.test.mjs
