@@ -47,13 +47,17 @@ export function evaluateEvaluationStages(input) {
       detail: "A passing evaluation remains review-only; human approval and separate deployment are mandatory."
     }
   ];
-  const passed = stages.every(stage => !stage.required || stage.passed);
+  const requiredStages = stages.filter(stage => stage.required);
+  const failedRequiredStages = requiredStages.filter(stage => !stage.passed);
+  const passed = failedRequiredStages.length === 0;
   return {
     version: "evaluation-stages-v2",
     passed,
     status: passed ? "eligible_for_human_review" : "blocked",
     passed_count: stages.filter(stage => stage.passed).length,
-    required_count: stages.filter(stage => stage.required).length,
+    required_count: requiredStages.length,
+    passed_required_count: requiredStages.length - failedRequiredStages.length,
+    failed_required_stage_ids: failedRequiredStages.map(stage => stage.id),
     stages
   };
 }
