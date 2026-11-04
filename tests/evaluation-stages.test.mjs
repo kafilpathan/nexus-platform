@@ -75,3 +75,9 @@ test("summarizes multiple failed required stages in deterministic order", () => 
   assert.equal(result.passed_required_count, 3);
   assert.equal(result.required_count, 6);
 });
+
+test("rejects fractional regression counts and out-of-range quality deltas", () => {
+  assert.equal(evaluateEvaluationStages({ ...valid, regressionCount: 0.5 }).passed, false);
+  assert.equal(evaluateEvaluationStages({ ...valid, improvement: 1.01 }).passed, false);
+  assert.equal(evaluateEvaluationStages({ ...valid, improvement: -1.01 }).passed, false);
+});
