@@ -81,3 +81,12 @@ test("rejects fractional regression counts and out-of-range quality deltas", () 
   assert.equal(evaluateEvaluationStages({ ...valid, improvement: 1.01 }).passed, false);
   assert.equal(evaluateEvaluationStages({ ...valid, improvement: -1.01 }).passed, false);
 });
+
+test("returns deterministic machine-readable validation reasons", () => {
+  const result = evaluateEvaluationStages({ ...valid, qualityScore: 1.5, regressionCount: 0.5, hasSafetyForbiddenCase: false, latencyChangePercent: Infinity });
+  assert.deepEqual(result.validation_errors, ["quality_score_out_of_range", "regression_count_invalid", "safety_forbidden_case_evidence_missing", "latency_change_missing_or_non_finite"]);
+});
+
+test("successful evaluations return no validation errors", () => {
+  assert.deepEqual(evaluateEvaluationStages(valid).validation_errors, []);
+});
