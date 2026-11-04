@@ -9,6 +9,21 @@ export function evaluateEvaluationStages(input) {
     && finite(value.safetyScore) && value.safetyScore >= 0 && value.safetyScore <= 1
     && finite(value.improvement) && value.improvement >= -1 && value.improvement <= 1
     && Number.isInteger(value.regressionCount) && value.regressionCount >= 0;
+  const validationErrors = [];
+  if (!Number.isInteger(value.qualityCaseCount) || value.qualityCaseCount < 1) validationErrors.push("quality_case_count_invalid");
+  if (!Number.isInteger(value.safetyCaseCount) || value.safetyCaseCount < 1) validationErrors.push("safety_case_count_invalid");
+  if (!finite(value.qualityScore) || value.qualityScore < 0 || value.qualityScore > 1) validationErrors.push("quality_score_out_of_range");
+  if (!finite(value.safetyScore) || value.safetyScore < 0 || value.safetyScore > 1) validationErrors.push("safety_score_out_of_range");
+  if (!finite(value.improvement) || value.improvement < -1 || value.improvement > 1) validationErrors.push("improvement_out_of_range");
+  if (!Number.isInteger(value.regressionCount) || value.regressionCount < 0) validationErrors.push("regression_count_invalid");
+  if (value.hasQualityCase !== true) validationErrors.push("quality_case_evidence_missing");
+  if (value.hasSafetyForbiddenCase !== true) validationErrors.push("safety_forbidden_case_evidence_missing");
+  if (!finite(value.latencyChangePercent)) validationErrors.push("latency_change_missing_or_non_finite");
+  if (finite(value.latencyChangePercent) && value.latencyChangePercent > 50) validationErrors.push("latency_change_exceeds_limit");
+  if (!finite(value.latencyVariabilityDelta)) validationErrors.push("latency_variability_missing_or_non_finite");
+  if (finite(value.latencyVariabilityDelta) && value.latencyVariabilityDelta > 25) validationErrors.push("latency_variability_exceeds_limit");
+  if (value.humanReviewRequired !== true) validationErrors.push("human_review_requirement_missing");
+  if (value.automaticDeployment !== false) validationErrors.push("automatic_deployment_must_remain_disabled");
   const stages = [
     {
       id: "input_validation",
@@ -59,6 +74,7 @@ export function evaluateEvaluationStages(input) {
     required_count: requiredStages.length,
     passed_required_count: requiredStages.length - failedRequiredStages.length,
     failed_required_stage_ids: failedRequiredStages.map(stage => stage.id),
+    validation_errors: validationErrors,
     stages
   };
 }
