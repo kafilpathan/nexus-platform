@@ -318,3 +318,42 @@ test("knowledge traversal rejects invalid max_edges before database reads", asyn
     mock.restore();
   }
 });
+
+test("knowledge traversal reports edge targets missing from node storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const start = "123e4567-e89b-42d3-a456-426614174000";
+  const found = "123e4567-e89b-42d3-a456-426614174001";
+  const missing = "123e4567-e89b-42d3-a456-426614174002";
+  const edges = [
+    { id: "ab", source_node_id: start, target_node_id: found, relation_type: "supports", confidence: 0.8 },
+    { id: "ac", source_node_id: start, target_node_id: missing, relation_type: "supports", confidence: 0.8 }
+  ];
+  const rows = [
+    { id: start, label: "start", node_type: "concept", description: "", confidence: 1 },
+    { id: found, label: "found", node_type: "concept", description: "", confidence: 0.8 }
+  ];
+  globalThis.fetch = async url => {
+    const target = String(url);
+    if (target.endsWith("/auth/v1/user")) return new Response(JSON.stringify({ id: adminId }), { status: 200 });
+    if (target.includes("/rest/v1/nexus_admins")) return new Response(JSON.stringify([{ user_id: adminId }]), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_edges?")) return new Response(JSON.stringify(edges), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_nodes?id=eq.")) return new Response(JSON.stringify([rows[0]]), { status: 200 });
+    if (target.includes("/rest/v1/nexus_knowledge_nodes?select=")) return new Response(JSON.stringify(rows), { status: 200 });
+    throw new Error("Unexpected request: " + target);
+  };
+  try {
+    const request = new Request("https://nexus.test/api/engine/knowledge/traverse?start_node_id=" + start + "&max_depth=1", {
+      headers: { Authorization: "Bearer test-session" }
+    });
+    const response = await handleEngineRequest(request, {
+      SUPABASE_URL: "https://supabase.test",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key"
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.deepEqual(body.integrity.missing_node_ids, [missing]);
+    assert.equal(body.integrity.missing_node_count, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
