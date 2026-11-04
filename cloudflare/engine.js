@@ -130,10 +130,11 @@ export async function handleEngineRequest(request, env) {
       const nodes = await rest(ctx, "nexus_knowledge_nodes?select=id,label,node_type,description,confidence,source_url,source_title&id=in.(" + ids.map(encodeURIComponent).join(",") + ")");
       const foundNodeIds = new Set(nodes.map(node => node.id));
       const missingNodeIds = ids.filter(id => !foundNodeIds.has(id));
+      const danglingEdgeIds = traversal.edges.filter(edge => !foundNodeIds.has(edge.source_node_id) || !foundNodeIds.has(edge.target_node_id)).map(edge => edge.id).filter(id => typeof id === "string" && id);
       return json({
         success: true,
         traversal: { ...traversal, nodes: nodes.map(node => ({ ...node, depth: node.id === startNodeId ? 0 : traversal.nodes.find(item => item.id === node.id)?.depth ?? null })) },
-        integrity: { missing_node_ids: missingNodeIds, missing_node_count: missingNodeIds.length },
+        integrity: { missing_node_ids: missingNodeIds, missing_node_count: missingNodeIds.length, dangling_edge_ids: danglingEdgeIds, dangling_edge_count: danglingEdgeIds.length },
         note: "Traversal direction, relation type, minimum edge confidence, and returned edge count are filterable; results are bounded by depth, node count, and a 500-edge snapshot."
       });
     }
