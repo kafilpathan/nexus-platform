@@ -119,19 +119,19 @@ export async function handleEngineRequest(request, env) {
       }
       const traversalOptions = parseKnowledgeTraversalOptions(url.searchParams);
       if (!traversalOptions.valid) return json({ error: traversalOptions.error }, 400);
-      const { maxDepth, maxNodes, direction, relationType, minConfidence } = traversalOptions;
+      const { maxDepth, maxNodes, maxEdges, direction, relationType, minConfidence } = traversalOptions;
       const [startRows, edges] = await Promise.all([
         rest(ctx, "nexus_knowledge_nodes?id=eq." + encodeURIComponent(startNodeId) + "&select=id,label,node_type,description,confidence&limit=1"),
         rest(ctx, "nexus_knowledge_edges?select=id,source_node_id,target_node_id,relation_type,confidence,created_at&order=created_at.desc,id.desc&limit=500")
       ]);
       if (!Array.isArray(startRows) || !startRows.length) return json({ error: "Start knowledge node was not found." }, 404);
-      const traversal = traverseKnowledgeGraph(edges, startNodeId, maxDepth, maxNodes, { direction, relationType, minConfidence });
+      const traversal = traverseKnowledgeGraph(edges, startNodeId, maxDepth, maxNodes, { direction, relationType, minConfidence, maxEdges });
       const ids = [...new Set([startNodeId, ...traversal.nodes.map(node => node.id)])];
       const nodes = await rest(ctx, "nexus_knowledge_nodes?select=id,label,node_type,description,confidence,source_url,source_title&id=in.(" + ids.map(encodeURIComponent).join(",") + ")");
       return json({
         success: true,
         traversal: { ...traversal, nodes: nodes.map(node => ({ ...node, depth: node.id === startNodeId ? 0 : traversal.nodes.find(item => item.id === node.id)?.depth ?? null })) },
-        note: "Traversal direction, relation type, and minimum edge confidence are filterable; results are bounded by depth, node count, and a 500-edge snapshot."
+        note: "Traversal direction, relation type, minimum edge confidence, and returned edge count are filterable; results are bounded by depth, node count, and a 500-edge snapshot."
       });
     }
 

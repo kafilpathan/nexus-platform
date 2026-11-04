@@ -87,3 +87,25 @@ test("minimum confidence excludes null and empty-string edge confidence", () => 
   const result = traverseKnowledgeGraph(edges, "root", 1, 10, { minConfidence: 0 });
   assert.deepEqual(result.nodes.map(node => node.id), ["zero-node"]);
 });
+
+test("bounds returned edges while preserving node traversal", () => {
+  const edges = [
+    { id: "ab", source_node_id: "a", target_node_id: "b" },
+    { id: "ac", source_node_id: "a", target_node_id: "c" },
+    { id: "bd", source_node_id: "b", target_node_id: "d" }
+  ];
+  const result = traverseKnowledgeGraph(edges, "a", 2, 10, { maxEdges: 1 });
+  assert.deepEqual(result.nodes.map(node => node.id), ["b", "c", "d"]);
+  assert.deepEqual(result.edges.map(edge => edge.id), ["ab"]);
+  assert.equal(result.max_edges, 1);
+  assert.equal(result.edges_truncated, true);
+});
+test("reports when edge output is not truncated", () => {
+  const result = traverseKnowledgeGraph([{ id: "ab", source_node_id: "a", target_node_id: "b" }], "a", 1, 10, { maxEdges: 2 });
+  assert.equal(result.edges_truncated, false);
+  assert.equal(result.edges.length, 1);
+});
+test("rejects invalid edge output bounds", () => {
+  assert.throws(() => traverseKnowledgeGraph([], "a", 1, 10, { maxEdges: 0 }), TypeError);
+  assert.throws(() => traverseKnowledgeGraph([], "a", 1, 10, { maxEdges: 501 }), TypeError);
+});
